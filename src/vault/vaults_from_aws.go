@@ -67,7 +67,7 @@ func getSynologyVaultsForRegion(accountId string, glacierClient glacieriface.Gla
 			if strings.HasSuffix(vaultName, "_mapping") {
 				dataVaultName := vaultName[0:strings.LastIndex(vaultName, "_mapping")]
 				if dataVault, ok := possibleDataVaults[dataVaultName]; ok {
-					if vaultFilter != "" && vaultFilter == vaultName {
+					if vaultFilter != "" && vaultFilter == dataVaultName {
 						loggers.DebugPrintf("vault found %s", dataVaultName)
 						return []*SynologyCoupleVault{&SynologyCoupleVault{region, dataVaultName, dataVault, vault}}, nil
 					} else {

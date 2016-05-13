@@ -19,7 +19,7 @@ func InitDefaultLog() {
 }
 
 func InitLog(debugWriter, infoWriter, warningWriter, errorWriter io.Writer) {
-	debug = log.New(debugWriter, "Debug: ", log.Ldate | log.Ltime | log.Lshortfile)
+	debug = log.New(debugWriter, "DEBUG: ", 0)
 	Info = log.New(infoWriter, "", 0)
 	Warning = log.New(warningWriter, "WARNING: ", 0)
 	Error = log.New(errorWriter, "ERROR: ", 0)
