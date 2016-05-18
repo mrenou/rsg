@@ -4,7 +4,7 @@ import (
 	"testing"
 	"github.com/stretchr/testify/assert"
 	"../loggers"
-	"../utils"
+	"../inputs"
 	"bytes"
 	"os"
 	"bufio"
@@ -45,7 +45,7 @@ func TestSelectRegionVaultFromSynologyVaults_when_there_is_no_synology_vault(t *
 func TestSelectRegionVaultFromSynologyVaults_when_there_is_several_synology_vaults(t *testing.T) {
 	buffer := new(bytes.Buffer)
 	loggers.InitLog(os.Stdout, buffer, buffer, os.Stdout)
-	utils.StdinReader = bufio.NewReader(bytes.NewReader([]byte("region1\nvault1\n")))
+	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("region1\nvault1\n")))
 
 	synologyVaults := []*SynologyCoupleVault{
 		&SynologyCoupleVault{"region1", "vault1", nil, nil},
@@ -68,7 +68,7 @@ func TestSelectRegionVaultFromSynologyVaults_when_there_is_several_synology_vaul
 func TestSelectRegionVaultFromSynologyVaults_retry_to_give_vault_to_use(t *testing.T) {
 	buffer := new(bytes.Buffer)
 	loggers.InitLog(os.Stdout, buffer, buffer, os.Stdout)
-	utils.StdinReader = bufio.NewReader(bytes.NewReader([]byte("bim\nbam\nregion1\nvault1\n")))
+	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("bim\nbam\nregion1\nvault1\n")))
 
 	synologyVaults := []*SynologyCoupleVault{
 		&SynologyCoupleVault{"region1", "vault1", nil, nil},

@@ -2,6 +2,7 @@ package main
 
 import (
 	"./vault"
+	"./inputs"
 	"github.com/aws/aws-sdk-go/aws/session"
 	flag "github.com/spf13/pflag"
 	"strings"
@@ -12,9 +13,12 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"fmt"
+	"os"
+	"errors"
 )
 
 type Options struct {
+	dest   string
 	region string
 	vault  string
 }
@@ -28,11 +32,26 @@ func main() {
 	region, vaultName := vault.SelectRegionVault(accountId, sessionValue, options.region, options.vault)
 	loggers.DebugPrintf("region and vault used for restauration : %s:%s", region, vaultName)
 
-	restorationContext := awsutils.CreateRestorationContext(sessionValue, accountId, region, vaultName)
+
+	restorationContext := awsutils.CreateRestorationContext(sessionValue, accountId, region, vaultName, options.dest)
 
 	//listJobs(restorationContext.GlacierClient, accountId, restorationContext.MappingVault)
 
 	vault.DownloadMappingArchive(restorationContext)
+	if _, err := os.Stat(options.dest); os.IsExist(err) {
+		if !inputs.QueryYesOrNo("destination directory already exists, do you want to keep existing files ?", true) {
+			if !inputs.QueryYesOrNo("are you sure, all existing files restored will be deleted ?", false) {
+				os.RemoveAll(options.dest)
+			}
+		}
+	}
+	err = vault.CheckDestinationDirectory(restorationContext)
+	utils.ExitIfError(err)
+	if err = os.MkdirAll(options.dest, 0700); err != nil {
+		utils.ExitIfError(errors.New(fmt.Sprintf("cannot create destination directory: %s", options.dest)))
+	}
+
+
 }
 
 func listJobs(glacierClient *glacier.Glacier, accountId, vault string) {
@@ -71,12 +90,24 @@ func getOutputJob(glacierClient *glacier.Glacier, accountId, vault, jobId string
 	return nil, nil
 }
 
-
 func parseOptions() Options {
 	options := Options{}
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage:\n%s [OPTIONS] DEST\n", os.Args[0])
+		flag.PrintDefaults()
+	}
+
 	flag.StringVarP(&options.region, "region", "r", "", "region of the vault to restore")
 	flag.StringVarP(&options.vault, "vault", "v", "", "vault to restore")
 	flag.Parse()
+
+	if (flag.NArg() != 1) {
+		fmt.Fprintf(os.Stderr, "no destination given\n")
+		os.Exit(2)
+	}
+	options.dest = flag.Arg(0)
+
+	loggers.DebugPrintf("options dest=%v \n", options.dest)
 	loggers.DebugPrintf("options region=%v \n", options.region)
 	loggers.DebugPrintf("options vault=%v \n", options.vault)
 	return options

@@ -5,6 +5,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"../loggers"
 	"../utils"
+	"../inputs"
 )
 
 func SelectRegionVault(accountId string, sessionValue *session.Session, givenRegion, givenVault string) (string, string) {
@@ -45,14 +46,14 @@ func selectRegionVaultFromSynologyVaults(synologyCoupleVaults []*SynologyCoupleV
 
 func readRegionFromStdIn() string {
 	loggers.Info.Print("Select the region of the vault to use for the restoration:")
-	region, err := utils.StdinReader.ReadString('\n')
+	region, err := inputs.StdinReader.ReadString('\n')
 	utils.ExitIfError(err)
 	return strings.TrimSuffix(region, "\n")
 }
 
 func readVaultFromStdIn() string {
 	loggers.Info.Print("Select the vault to use for the restoration:")
-	vault, err := utils.StdinReader.ReadString('\n')
+	vault, err := inputs.StdinReader.ReadString('\n')
 	utils.ExitIfError(err)
 	return strings.TrimSuffix(vault, "\n")
 }

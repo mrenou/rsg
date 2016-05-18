@@ -19,13 +19,14 @@ type Archive struct {
 }
 
 type RestorationContext struct {
-	GlacierClient    glacieriface.GlacierAPI
-	WorkingDirPath    string
-	Region           string
-	Vault            string
-	MappingVault     string
-	AccountId        string
-	RegionVaultCache RegionVaultCache;
+	GlacierClient      glacieriface.GlacierAPI
+	WorkingDirPath     string
+	Region             string
+	Vault              string
+	MappingVault       string
+	AccountId          string
+	RegionVaultCache   RegionVaultCache
+	DestinationDirPath string
 }
 
 type RegionVaultCache struct {
@@ -34,7 +35,7 @@ type RegionVaultCache struct {
 	MappingVaultRetrieveJobId  string
 }
 
-func CreateRestorationContext(sessionValue *session.Session, accountId, region, vault string) *RestorationContext {
+func CreateRestorationContext(sessionValue *session.Session, accountId, region, vault,  destinationDirPath string) *RestorationContext {
 	usr, err := user.Current()
 	utils.ExitIfError(err)
 	workingDirPath :=  usr.HomeDir + "/.rsg/" + region + "/" + vault
@@ -42,7 +43,7 @@ func CreateRestorationContext(sessionValue *session.Session, accountId, region, 
 	utils.ExitIfError(err)
 	glacierClient := glacier.New(sessionValue, &aws.Config{Region: aws.String(region)})
 	cache := ReadRegionVaultCache(region, vault, workingDirPath);
-	return &RestorationContext{glacierClient, workingDirPath, region, vault, vault + "_mapping", accountId, cache}
+	return &RestorationContext{glacierClient, workingDirPath, region, vault, vault + "_mapping", accountId, cache, destinationDirPath}
 }
 
 func ReadRegionVaultCache(region, vault, workingDirPath string) RegionVaultCache {

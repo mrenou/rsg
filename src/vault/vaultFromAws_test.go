@@ -1,29 +1,12 @@
 package vault
 
 import (
-	"github.com/stretchr/testify/mock"
 	"testing"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"../loggers"
 )
-
-type SessionMock struct {
-	session.Session
-	mock.Mock
-}
-
-type GlacierMock struct {
-	glacier.Glacier
-	mock.Mock
-}
-
-func (m *GlacierMock) ListVaults(input *glacier.ListVaultsInput) (*glacier.ListVaultsOutput, error) {
-	args := m.Called(input)
-	return args.Get(0).(*glacier.ListVaultsOutput), args.Error(1)
-}
 
 func TestGetSynologyVaults_should_return_one_vault(t *testing.T) {
 	loggers.InitDefaultLog()

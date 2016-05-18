@@ -3,6 +3,7 @@ package vault
 import (
 	"../loggers"
 	"../utils"
+	"../inputs"
 	"../awsutils"
 	"strings"
 	"github.com/aws/aws-sdk-go/service/glacier"
@@ -18,37 +19,12 @@ func DownloadMappingArchive(restorationContext *awsutils.RestorationContext) {
 	if stat, err := os.Stat(restorationContext.GetMappingFilePath()); os.IsNotExist(err) {
 		downloadMappingArchive(restorationContext)
 	} else {
-		if queryYesOrNo(fmt.Sprintf("local mapping archive already exists with last modification date %v, retrieve a new mapping file ?", stat.ModTime().Format("Mon Jan _2 15:04:05 2006")), false) {
+		if inputs.QueryYesOrNo(fmt.Sprintf("local mapping archive already exists with last modification date %v, retrieve a new mapping file ?", stat.ModTime().Format("Mon Jan _2 15:04:05 2006")), false) {
 			os.Remove(restorationContext.GetMappingFilePath())
 			downloadMappingArchive(restorationContext)
 		}
 	}
 
-}
-
-func queryYesOrNo(query string, defaultAnswer bool) bool {
-	for {
-		yes := "y"
-		no := "n"
-		if defaultAnswer {
-			yes = strings.ToUpper(yes)
-		} else {
-			no = strings.ToUpper(no)
-		}
-		loggers.Info.Printf("%s[%s:%s]", query, yes, no)
-		resp, err := utils.StdinReader.ReadString('\n')
-		utils.ExitIfError(err)
-		resp = strings.TrimSuffix(resp, "\n")
-		resp = strings.ToLower(resp)
-		switch resp {
-		case "y":
-			return true
-		case "n":
-			return false
-		case "":
-			return defaultAnswer
-		}
-	}
 }
 
 func downloadMappingArchive(restorationContext *awsutils.RestorationContext) {

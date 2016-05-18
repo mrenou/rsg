@@ -2,15 +2,12 @@ package vault
 
 import (
 	"../awsutils"
-	"../utils"
-	"../loggers"
+	"../inputs"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"github.com/aws/aws-sdk-go/aws"
 	"testing"
 	"bytes"
 	"io"
-	"os"
-	"path/filepath"
 	"io/ioutil"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -18,36 +15,7 @@ import (
 	"bufio"
 	"regexp"
 	"strings"
-	"time"
 )
-
-func initTest() *bytes.Buffer {
-	buffer := new(bytes.Buffer)
-	RemoveContents("../../testtmp")
-	os.Remove("../../testtmp")
-	os.Mkdir("../../testtmp", 0700)
-	loggers.InitLog(os.Stdout, buffer, buffer, os.Stderr)
-	awsutils.WaitTime = 1 * time.Nanosecond
-	return buffer
-}
-
-func (m *GlacierMock) InitiateJob(input *glacier.InitiateJobInput) (*glacier.InitiateJobOutput, error) {
-	args := m.Called(input)
-	return args.Get(0).(*glacier.InitiateJobOutput), args.Error(1)
-}
-
-func (m *GlacierMock) DescribeJob(input *glacier.DescribeJobInput) (*glacier.JobDescription, error) {
-	args := m.Called(input)
-	if args.Get(0) != nil {
-		return args.Get(0).(*glacier.JobDescription), args.Error(1)
-	}
-	return nil, args.Error(1)
-}
-
-func (m *GlacierMock) GetJobOutput(input *glacier.GetJobOutputInput) (*glacier.GetJobOutputOutput, error) {
-	args := m.Called(input)
-	return args.Get(0).(*glacier.GetJobOutputOutput), args.Error(1)
-}
 
 func mockStartMappingJobInventory(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext) *mock.Call {
 	params := &glacier.InitiateJobInput{
@@ -125,10 +93,9 @@ func mockStartRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils
 
 func TestDownloadMappingArchive_download_mapping_first_time(t *testing.T) {
 	// Given
-	buffer := initTest()
+	buffer := InitTest()
 	glacierMock := new(GlacierMock)
-	regionVaultCache := awsutils.RegionVaultCache{}
-	restorationContext := &awsutils.RestorationContext{glacierMock, "../../testtmp", "region", "vault", "vault_mapping", "acountId", regionVaultCache}
+	restorationContext := DefaultRestorationContext(glacierMock)
 
 	mockStartMappingJobInventory(glacierMock, restorationContext)
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
@@ -153,11 +120,10 @@ func TestDownloadMappingArchive_download_mapping_first_time(t *testing.T) {
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_job_in_progress(t *testing.T) {
 	// Given
-	buffer := initTest()
+	buffer := InitTest()
 	glacierMock := new(GlacierMock)
-
-	regionVaultCache := awsutils.RegionVaultCache{"inventoryMappingJobId", nil, ""}
-	restorationContext := &awsutils.RestorationContext{glacierMock, "../../testtmp", "region", "vault", "vault_mapping", "acountId", regionVaultCache}
+	restorationContext := DefaultRestorationContext(glacierMock)
+	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"inventoryMappingJobId", nil, ""}
 
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, false).Once()
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
@@ -182,11 +148,10 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_in_progress(
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_job_deprecated(t *testing.T) {
 	// Given
-	buffer := initTest()
+	buffer := InitTest()
 	glacierMock := new(GlacierMock)
-
-	regionVaultCache := awsutils.RegionVaultCache{"unknownInventoryMappingJobId", nil, ""}
-	restorationContext := &awsutils.RestorationContext{glacierMock, "../../testtmp", "region", "vault", "vault_mapping", "acountId", regionVaultCache}
+	restorationContext := DefaultRestorationContext(glacierMock)
+	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"unknownInventoryMappingJobId", nil, ""}
 
 	mockDescribeJobErr(glacierMock, restorationContext, "unknownInventoryMappingJobId", restorationContext.MappingVault, errors.New("The job ID was not found"))
 	mockStartMappingJobInventory(glacierMock, restorationContext)
@@ -213,11 +178,10 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_deprecated(t
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_done(t *testing.T) {
 	// Given
-	buffer := initTest()
+	buffer := InitTest()
 	glacierMock := new(GlacierMock)
-
-	regionVaultCache := awsutils.RegionVaultCache{"inventoryMappingJobId", nil, ""}
-	restorationContext := &awsutils.RestorationContext{glacierMock, "../../testtmp", "region", "vault", "vault_mapping", "acountId", regionVaultCache}
+	restorationContext := DefaultRestorationContext(glacierMock)
+	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"inventoryMappingJobId", nil, ""}
 
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
@@ -239,11 +203,10 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_done(t *testing.
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_job_in_progress(t *testing.T) {
 	// Given
-	buffer := initTest()
+	buffer := InitTest()
 	glacierMock := new(GlacierMock)
-
-	regionVaultCache := awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
-	restorationContext := &awsutils.RestorationContext{glacierMock, "../../testtmp", "region", "vault", "vault_mapping", "acountId", regionVaultCache}
+	restorationContext := DefaultRestorationContext(glacierMock)
+	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
 
 	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, false).Once()
 	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
@@ -263,11 +226,10 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_job_in_progress(t
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_job_deprecated(t *testing.T) {
 	// Given
-	buffer := initTest()
+	buffer := InitTest()
 	glacierMock := new(GlacierMock)
-
-	regionVaultCache := awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "unknownRetrieveMappingJobId"}
-	restorationContext := &awsutils.RestorationContext{glacierMock, "../../testtmp", "region", "vault", "vault_mapping", "acountId", regionVaultCache}
+	restorationContext := DefaultRestorationContext(glacierMock)
+	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "unknownRetrieveMappingJobId"}
 
 	mockDescribeJobErr(glacierMock, restorationContext, "unknownRetrieveMappingJobId", restorationContext.MappingVault, errors.New("The job ID was not found"))
 	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "retrieveMappingJobId")
@@ -289,11 +251,10 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_job_deprecated(t 
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_done(t *testing.T) {
 	// Given
-	buffer := initTest()
+	buffer := InitTest()
 	glacierMock := new(GlacierMock)
-
-	regionVaultCache := awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
-	restorationContext := &awsutils.RestorationContext{glacierMock, "../../testtmp", "region", "vault", "vault_mapping", "acountId", regionVaultCache}
+	restorationContext := DefaultRestorationContext(glacierMock)
+	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
 
 	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
@@ -310,15 +271,14 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_done(t *testing.T
 
 func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists(t *testing.T) {
 	// Given
-	buffer := initTest()
+	buffer := InitTest()
 	glacierMock := new(GlacierMock)
+	restorationContext := DefaultRestorationContext(glacierMock)
+	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
 
-	regionVaultCache := awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
-	restorationContext := &awsutils.RestorationContext{glacierMock, "../../testtmp", "region", "vault", "vault_mapping", "acountId", regionVaultCache}
+	ioutil.WriteFile("../../testtmp/cache/mapping.sqllite", []byte("hello !"), 0600)
 
-	ioutil.WriteFile("../../testtmp/mapping.sqllite", []byte("hello !"), 0600)
-
-	utils.StdinReader = bufio.NewReader(bytes.NewReader([]byte("\n")))
+	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("\n")))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -329,22 +289,20 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists(t *
 
 	glacierMock.AssertNotCalled(t, mock.Anything)
 
-	r := regexp.MustCompile("local mapping archive already exists with last modification date .+, retrieve a new mapping file \\?\\[y\\:N\\]")
+	r := regexp.MustCompile("local mapping archive already exists with last modification date .+, retrieve a new mapping file \\?\\[y/N\\]")
 	assert.True(t, r.Match(buffer.Bytes()))
 }
 
 
 func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but_restart_download(t *testing.T) {
 	// Given
-	buffer := initTest()
+	buffer := InitTest()
 	glacierMock := new(GlacierMock)
+	restorationContext := DefaultRestorationContext(glacierMock)
 
-	regionVaultCache := awsutils.RegionVaultCache{}
-	restorationContext := &awsutils.RestorationContext{glacierMock, "../../testtmp", "region", "vault", "vault_mapping", "acountId", regionVaultCache}
+	ioutil.WriteFile("../../testtmp/cache/mapping.sqllite", []byte("hello !"), 0600)
 
-	ioutil.WriteFile("../../testtmp/mapping.sqllite", []byte("hello !"), 0600)
-
-	utils.StdinReader = bufio.NewReader(bytes.NewReader([]byte("y\n")))
+	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("y\n")))
 
 	mockStartMappingJobInventory(glacierMock, restorationContext)
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
@@ -362,7 +320,7 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but
 
 	outputs := strings.Split(string(buffer.Bytes()), "\n")
 
-	assert.True(t, regexp.MustCompile("local mapping archive already exists with last modification date .+, retrieve a new mapping file \\?\\[y\\:N\\]").MatchString(outputs[0]))
+	assert.True(t, regexp.MustCompile("local mapping archive already exists with last modification date .+, retrieve a new mapping file \\?\\[y/N\\]").MatchString(outputs[0]))
 	assert.Equal(t, "job to find mapping archive id has started (can last up to 4 hours): inventoryMappingJobId", outputs[1])
 	assert.Equal(t, "job has finished: inventoryMappingJobId", outputs[2])
 	assert.Equal(t, "job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId", outputs[3])
@@ -371,7 +329,7 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but
 }
 
 func assertMappingArchive(t *testing.T, expected string) {
-	data, _ := ioutil.ReadFile("../../testtmp/mapping.sqllite")
+	data, _ := ioutil.ReadFile("../../testtmp/cache/mapping.sqllite")
 	assert.Equal(t, expected, string(data))
 }
 
@@ -393,23 +351,4 @@ func (readerClosable ReaderClosable) Close() error {
 
 func (readerClosable ReaderClosable) Read(p []byte) (n int, err error) {
 	return readerClosable.reader.Read(p)
-}
-
-func RemoveContents(dir string) error {
-	d, err := os.Open(dir)
-	if err != nil {
-		return err
-	}
-	defer d.Close()
-	names, err := d.Readdirnames(-1)
-	if err != nil {
-		return err
-	}
-	for _, name := range names {
-		err = os.RemoveAll(filepath.Join(dir, name))
-		if err != nil {
-			return err
-		}
-	}
-	return nil
 }

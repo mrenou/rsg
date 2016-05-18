@@ -3,10 +3,7 @@ package utils
 import "os"
 import (
 	"../loggers"
-	"bufio"
 )
-
-var StdinReader = bufio.NewReader(os.Stdin)
 
 func ExitIfError(err error) {
 	if (err != nil) {
