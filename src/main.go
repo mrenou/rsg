@@ -14,7 +14,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"fmt"
 	"os"
-	"errors"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 type Options struct {
@@ -47,11 +47,8 @@ func main() {
 	}
 	err = vault.CheckDestinationDirectory(restorationContext)
 	utils.ExitIfError(err)
-	if err = os.MkdirAll(options.dest, 0700); err != nil {
-		utils.ExitIfError(errors.New(fmt.Sprintf("cannot create destination directory: %s", options.dest)))
-	}
 
-
+	vault.DownloadArchives(restorationContext)
 }
 
 func listJobs(glacierClient *glacier.Glacier, accountId, vault string) {

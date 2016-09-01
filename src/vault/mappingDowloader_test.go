@@ -73,15 +73,15 @@ func mockOutputJob(glacierMock *GlacierMock, restorationContext *awsutils.Restor
 	return glacierMock.On("GetJobOutput", params).Return(out, nil)
 }
 
-func mockStartRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, archiveId, description, jobIdToReturn string, ) *mock.Call {
+func mockStartRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, archiveId, description, retrievalByteRange, jobIdToReturn string) *mock.Call {
 	params := &glacier.InitiateJobInput{
 		AccountId: aws.String(restorationContext.AccountId),
 		VaultName: aws.String(restorationContext.MappingVault),
 		JobParameters: &glacier.JobParameters{
 			ArchiveId: aws.String(archiveId),
-			Description: aws.String(description),
+			//Description: aws.String(description),
 			Type:        aws.String("archive-retrieval"),
-			RetrievalByteRange: nil,
+			RetrievalByteRange: aws.String(retrievalByteRange),
 		},
 	}
 
@@ -100,7 +100,7 @@ func TestDownloadMappingArchive_download_mapping_first_time(t *testing.T) {
 	mockStartMappingJobInventory(glacierMock, restorationContext)
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "retrieveMappingJobId")
+	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
 	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
@@ -128,7 +128,7 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_in_progress(
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, false).Once()
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "retrieveMappingJobId")
+	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
 	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
@@ -157,7 +157,7 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_deprecated(t
 	mockStartMappingJobInventory(glacierMock, restorationContext)
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "retrieveMappingJobId")
+	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
 	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
@@ -185,7 +185,7 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_done(t *testing.
 
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "retrieveMappingJobId")
+	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
 	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
@@ -232,7 +232,7 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_job_deprecated(t 
 	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "unknownRetrieveMappingJobId"}
 
 	mockDescribeJobErr(glacierMock, restorationContext, "unknownRetrieveMappingJobId", restorationContext.MappingVault, errors.New("The job ID was not found"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "retrieveMappingJobId")
+	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
 	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
@@ -307,7 +307,7 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but
 	mockStartMappingJobInventory(glacierMock, restorationContext)
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "retrieveMappingJobId")
+	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
 	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
 	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 

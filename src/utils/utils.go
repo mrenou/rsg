@@ -5,6 +5,9 @@ import (
 	"../loggers"
 )
 
+const S_1MB = 1024 * 1024
+const S_1GB = 1024 * S_1MB
+
 func ExitIfError(err error) {
 	if (err != nil) {
 		loggers.Error.Print(err)

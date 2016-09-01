@@ -65,6 +65,8 @@ func checkRetrieveMappingOrStartNewJob(restorationContext *awsutils.RestorationC
 
 func startRetrieveMappingArchiveJob(restorationContext *awsutils.RestorationContext, vault string, archive awsutils.Archive) string {
 	jobId := awsutils.StartRetrieveArchiveJob(restorationContext, restorationContext.MappingVault, archive)
+	restorationContext.RegionVaultCache.MappingVaultRetrieveJobId = jobId
+	restorationContext.WriteRegionVaultCache()
 	loggers.Info.Printf("job to retrieve mapping archive has started (can last up to 4 hours): %s\n", jobId)
 	return jobId
 }

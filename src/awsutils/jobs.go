@@ -6,7 +6,10 @@ import (
 	"../loggers"
 	"../utils"
 	"github.com/aws/aws-sdk-go/service/glacier"
-	"io/ioutil"
+	"strconv"
+	"errors"
+	"io"
+	"os"
 )
 
 var WaitTime = 5 * time.Minute
@@ -24,12 +27,12 @@ func WaitJobIsCompleted(restorationContext *RestorationContext, vault, jobId str
 }
 
 func DescribeJob(restorationContext *RestorationContext, vault, jobId string) (*glacier.JobDescription, error) {
-	loggers.DebugPrintf("describe job %s on vault %s\n", jobId, restorationContext.Vault)
 	params := &glacier.DescribeJobInput{
 		AccountId: aws.String(restorationContext.AccountId),
 		JobId:     aws.String(jobId),
 		VaultName: aws.String(vault),
 	}
+	loggers.DebugPrintf("describe job with params: %v\n", params)
 	return restorationContext.GlacierClient.DescribeJob(params)
 }
 
@@ -41,37 +44,68 @@ func JobIsCompleted(restorationContext *RestorationContext, vault, jobId string)
 	}
 }
 
-func DownloadArchiveTo(restorationContext *RestorationContext, vault , jobId string, filename string) {
+func DownloadArchiveTo(restorationContext *RestorationContext, vault, jobId string, filename string) {
+	DownloadPartialArchiveTo(restorationContext, vault, jobId, filename, 0, 0)
+}
+
+func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, jobId string, destPath string, fromByte, sizeToDownload uint64) {
+	var rangeToRetrieve *string = nil
+	if sizeToDownload != 0 {
+		rangeToRetrieve = aws.String(strconv.FormatUint(fromByte, 10) + "-" + strconv.FormatUint(fromByte + sizeToDownload - 1, 10))
+	}
 	params := &glacier.GetJobOutputInput{
 		AccountId: aws.String(restorationContext.AccountId),
 		JobId:     aws.String(jobId),
 		VaultName: aws.String(vault),
+		Range: rangeToRetrieve,
 	}
+	loggers.DebugPrintf("get output job with params: %v\n", params)
 	resp, err := restorationContext.GlacierClient.GetJobOutput(params)
 	utils.ExitIfError(err)
-	bytes, err := ioutil.ReadAll(resp.Body)
-	utils.ExitIfError(err)
 	defer resp.Body.Close()
-	err = ioutil.WriteFile(filename, bytes, 0600)
+	var file *os.File;
+	if _, err := os.Stat(destPath); os.IsNotExist(err) {
+		file, err = os.Create(destPath)
+	} else {
+		file, err = os.OpenFile(destPath, os.O_APPEND | os.O_WRONLY, 0600)
+	}
+	utils.ExitIfError(err)
+	loggers.DebugPrintf("copy file into: %v\n", destPath)
+	_, err = io.Copy(file, resp.Body)
 	utils.ExitIfError(err)
 }
 
 func StartRetrieveArchiveJob(restorationContext *RestorationContext, vault string, archive Archive) string {
-	var rangeToRetrive *string = nil
-	// TODO use rangeToRetrive when limit download
+	jobId, _ := StartRetrievePartialArchiveJob(restorationContext, vault, archive, 0, archive.Size)
+	return jobId
+}
+
+func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vault string, archive Archive, fromByte uint64, sizeToRetrieve uint64) (string, uint64) {
+	rangeToRetrieve := ""
+	if (fromByte) % utils.S_1MB != 0 {
+		utils.ExitIfError(errors.New("byte start index must be divisible by 1MB"))
+	}
+	if (fromByte + sizeToRetrieve >= archive.Size) {
+		sizeToRetrieve = archive.Size - fromByte
+	} else if sizeToRetrieve >= utils.S_1MB {
+		sizeToRetrieve = sizeToRetrieve - (sizeToRetrieve % utils.S_1MB)
+	} else {
+		utils.ExitIfError(errors.New("size to retrieve must be divisible by MB"))
+	}
+	rangeToRetrieve = strconv.FormatUint(fromByte, 10) + "-" + strconv.FormatUint(fromByte + sizeToRetrieve - 1, 10)
+
 	params := &glacier.InitiateJobInput{
 		AccountId: aws.String(restorationContext.AccountId),
 		VaultName: aws.String(vault),
 		JobParameters: &glacier.JobParameters{
 			ArchiveId: aws.String(archive.ArchiveId),
-			Description: aws.String("restore mapping from " + restorationContext.MappingVault),
+			//Description: aws.String("restore mapping from " + restorationContext.MappingVault),
 			Type:        aws.String("archive-retrieval"),
-			RetrievalByteRange: rangeToRetrive,
+			RetrievalByteRange: aws.String(rangeToRetrieve),
 		},
 	}
+	loggers.DebugPrintf("start retrieve archive job with params: %v\n", params)
 	resp, err := restorationContext.GlacierClient.InitiateJob(params)
 	utils.ExitIfError(err)
-	restorationContext.RegionVaultCache.MappingVaultRetrieveJobId = *resp.JobId
-	restorationContext.WriteRegionVaultCache()
-	return *resp.JobId
+	return *resp.JobId, sizeToRetrieve
 }

@@ -35,10 +35,10 @@ type RegionVaultCache struct {
 	MappingVaultRetrieveJobId  string
 }
 
-func CreateRestorationContext(sessionValue *session.Session, accountId, region, vault,  destinationDirPath string) *RestorationContext {
+func CreateRestorationContext(sessionValue *session.Session, accountId, region, vault, destinationDirPath string) *RestorationContext {
 	usr, err := user.Current()
 	utils.ExitIfError(err)
-	workingDirPath :=  usr.HomeDir + "/.rsg/" + region + "/" + vault
+	workingDirPath := usr.HomeDir + "/.rsg/" + region + "/" + vault
 	err = os.MkdirAll(workingDirPath, 0700)
 	utils.ExitIfError(err)
 	glacierClient := glacier.New(sessionValue, &aws.Config{Region: aws.String(region)})

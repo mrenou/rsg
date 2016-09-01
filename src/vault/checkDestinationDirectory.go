@@ -20,7 +20,7 @@ func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) 
 			}
 		}
 	}
-	if err := os.Mkdir(destinationDirectoryPath, 0700); err != nil {
+	if err := os.MkdirAll(destinationDirectoryPath, 0700); err != nil {
 		return errors.New(fmt.Sprintf("cannot create destination directory: %s", destinationDirectoryPath))
 	}
 	return nil
