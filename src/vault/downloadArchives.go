@@ -10,6 +10,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 	"path/filepath"
 	"errors"
+	"time"
 )
 
 type archiveRetrieve struct {
@@ -43,6 +44,7 @@ const _5minInSeconds = 60 * 5
 type DownloadContext struct {
 	restorationContext             *awsutils.RestorationContext
 	bytesBySecond                  uint64
+	downloadSpeedAutoUpdate        bool
 	maxArchivesRetrievingSize      uint64
 	archivesRetrievingSize         uint64
 	archivePartRetrieveListMaxSize int
@@ -63,6 +65,7 @@ func DownloadArchives(restorationContext *awsutils.RestorationContext) {
 	downloadContext := new(DownloadContext)
 	downloadContext.restorationContext = restorationContext
 	downloadContext.bytesBySecond = uint64(utils.S_1MB)
+	downloadContext.downloadSpeedAutoUpdate = true
 	downloadContext.archivePartRetrieveListMaxSize = utils.S_1GB / archiveRetrieveStructSize
 	downloadContext.maxArchivesRetrievingSize = downloadContext.bytesBySecond * uint64(_4hoursInSeconds)
 	downloadContext.downloadArchives()
@@ -176,6 +179,7 @@ func (downloadContext *DownloadContext) handleArchiveRetrieveCompletion(archiveT
 func (downloadContext *DownloadContext) downloadArchivesPartWhenReady() {
 	maxArchivesDownloadingSize := downloadContext.bytesBySecond * uint64(_5minInSeconds)
 	var archivesDownloadingSize uint64 = 0
+	totalDuration := time.Duration(0)
 
 	for archivesDownloadingSize < maxArchivesDownloadingSize && (downloadContext.archivePartRetrieveList.Len() > 0 || downloadContext.uncompletedDownload != nil) {
 		if (downloadContext.uncompletedDownload == nil && downloadContext.archivePartRetrieveList.Len() > 0) {
@@ -184,12 +188,24 @@ func (downloadContext *DownloadContext) downloadArchivesPartWhenReady() {
 
 		archivePath := downloadContext.restorationContext.DestinationDirPath + "/" + getArchiveBasePath(downloadContext.db, downloadContext.uncompletedDownload.dbKey)
 		archivesDownloadingSizeLeft := maxArchivesDownloadingSize - archivesDownloadingSize
-		sizeDownloaded := downloadArchive(downloadContext.restorationContext, downloadContext.uncompletedDownload, archivePath + ".tmp", downloadContext.nextByteIndexToDownload, archivesDownloadingSizeLeft)
+		sizeDownloaded, duration := downloadArchive(downloadContext.restorationContext, downloadContext.uncompletedDownload, archivePath + ".tmp", downloadContext.nextByteIndexToDownload, archivesDownloadingSizeLeft)
+		totalDuration += duration
 		archivesDownloadingSize += sizeDownloaded
 		downloadContext.nextByteIndexToDownload += sizeDownloaded
 		downloadContext.archivesRetrievingSize -= sizeDownloaded
 
 		downloadContext.handleArchivePartDownloadCompletion(archivePath)
+	}
+	downloadContext.updateDownloadSpeed(archivesDownloadingSize, totalDuration)
+}
+
+func (downloadContext *DownloadContext) updateDownloadSpeed(downloadedSize uint64, duration time.Duration) {
+	if (downloadContext.downloadSpeedAutoUpdate) {
+		downloadContext.bytesBySecond = uint64(float64(downloadedSize) / duration.Seconds())
+		if (downloadContext.bytesBySecond == 0) {
+			downloadContext.bytesBySecond = 1
+		}
+		loggers.DebugPrintf("new download speed : %v bytes/s\n", downloadContext.bytesBySecond)
 	}
 }
 
@@ -220,15 +236,16 @@ func (downloadContext *DownloadContext) waitNextArchivePartIsRetrieved() *archiv
 	return archivePartRetrieve
 }
 
-func downloadArchive(restorationContext *awsutils.RestorationContext, archivePartRetrieve *archivePartRetrieve, archivePath string, fromByteIndex, nbBytesCanDownload uint64) uint64 {
+func downloadArchive(restorationContext *awsutils.RestorationContext, archivePartRetrieve *archivePartRetrieve, archivePath string, fromByteIndex, nbBytesCanDownload uint64) (uint64, time.Duration) {
 	sizeToDownload := archivePartRetrieve.retrievedSize - fromByteIndex
 	if (sizeToDownload > nbBytesCanDownload) {
 		sizeToDownload = nbBytesCanDownload
 	}
 	err := os.MkdirAll(filepath.Dir(archivePath), 0700)
 	utils.ExitIfError(err)
+	start := time.Now()
 	awsutils.DownloadPartialArchiveTo(restorationContext, restorationContext.Vault, archivePartRetrieve.jobId, archivePath, fromByteIndex, sizeToDownload)
-	return sizeToDownload
+	return sizeToDownload, time.Since(start)
 }
 
 func (downloadContext *DownloadContext) loadDb() *sql.DB {

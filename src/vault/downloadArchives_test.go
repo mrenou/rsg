@@ -61,6 +61,7 @@ func TestDownloadArchives_retrieve_and_download_file_in_one_part(t *testing.T) {
 		restorationContext: restorationContext,
 		bytesBySecond: 1,
 		maxArchivesRetrievingSize: utils.S_1MB,
+		downloadSpeedAutoUpdate: false,
 		archivesRetrievingSize: 0,
 		archivePartRetrieveListMaxSize: 1,
 		archivePartRetrieveList: nil,
@@ -94,6 +95,7 @@ func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T
 		restorationContext: restorationContext,
 		bytesBySecond: 3496, // 1048800 on 5 min
 		maxArchivesRetrievingSize: utils.S_1MB * 2,
+		downloadSpeedAutoUpdate: false,
 		archivesRetrievingSize: 0,
 		archivePartRetrieveListMaxSize: 10,
 		archivePartRetrieveList: nil,
