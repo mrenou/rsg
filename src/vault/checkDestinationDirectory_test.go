@@ -10,7 +10,6 @@ import (
 	"strings"
 )
 
-
 func TestCheckDestination_dest_not_exist(t *testing.T) {
 	// Given
 	buffer := InitTest()

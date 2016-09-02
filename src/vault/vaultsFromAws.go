@@ -45,7 +45,7 @@ func getSynologyVaultsOnAllRegions(accountId string, sessionValue *session.Sessi
 		if err != nil {
 			return nil, err
 		}
-		synologyCoupleVaults= append(synologyCoupleVaults, synologyCoupleVaultsForRegion...)
+		synologyCoupleVaults = append(synologyCoupleVaults, synologyCoupleVaultsForRegion...)
 	}
 	return synologyCoupleVaults, nil;
 }

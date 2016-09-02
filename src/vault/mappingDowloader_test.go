@@ -293,7 +293,6 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists(t *
 	assert.True(t, r.Match(buffer.Bytes()))
 }
 
-
 func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but_restart_download(t *testing.T) {
 	// Given
 	buffer := InitTest()
