@@ -51,7 +51,7 @@ func getSynologyVaultsOnAllRegions(accountId string, sessionValue *session.Sessi
 }
 
 func getSynologyVaultsForRegion(accountId string, glacierClient glacieriface.GlacierAPI, region string, vaultFilter string) ([]*SynologyCoupleVault, error) {
-	loggers.Printf(loggers.Debug, "get vault for region %s with vaultFilter=%s", region, vaultFilter)
+	loggers.Printf(loggers.Debug, "get vault for region %s with vaultFilter=%s\n", region, vaultFilter)
 	haveResults := true
 	possibleDataVaults := map[string]*glacier.DescribeVaultOutput{}
 	synologyCoupleVaults := []*SynologyCoupleVault{}
@@ -68,10 +68,10 @@ func getSynologyVaultsForRegion(accountId string, glacierClient glacieriface.Gla
 				dataVaultName := vaultName[0:strings.LastIndex(vaultName, "_mapping")]
 				if dataVault, ok := possibleDataVaults[dataVaultName]; ok {
 					if vaultFilter != "" && vaultFilter == dataVaultName {
-						loggers.Printf(loggers.Debug, "vault found %s", dataVaultName)
+						loggers.Printf(loggers.Debug, "vault found %s\n", dataVaultName)
 						return []*SynologyCoupleVault{&SynologyCoupleVault{region, dataVaultName, dataVault, vault}}, nil
 					} else {
-						loggers.Printf(loggers.Debug, "vault added %s", dataVaultName)
+						loggers.Printf(loggers.Debug, "vault added %s\n", dataVaultName)
 						synologyCoupleVaults = append(synologyCoupleVaults, &SynologyCoupleVault{region, dataVaultName, dataVault, vault})
 					}
 				}

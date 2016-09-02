@@ -21,6 +21,7 @@ type Options struct {
 	dest   string
 	region string
 	vault  string
+	debug  bool
 }
 
 func main() {
@@ -30,7 +31,7 @@ func main() {
 	utils.ExitIfError(err)
 	options := parseOptions()
 	region, vaultName := vault.SelectRegionVault(accountId, sessionValue, options.region, options.vault)
-	loggers.Printf(loggers.Debug, "region and vault used for restauration : %s:%s", region, vaultName)
+	loggers.Printf(loggers.Debug, "region and vault used for restauration : %s:%s\n", region, vaultName)
 
 	restorationContext := awsutils.CreateRestorationContext(sessionValue, accountId, region, vaultName, options.dest)
 
@@ -95,6 +96,7 @@ func parseOptions() Options {
 
 	flag.StringVarP(&options.region, "region", "r", "", "region of the vault to restore")
 	flag.StringVarP(&options.vault, "vault", "v", "", "vault to restore")
+	flag.BoolVarP(&options.debug, "debug", "x", false, "display debug info")
 	flag.Parse()
 
 	if (flag.NArg() != 1) {
@@ -103,9 +105,11 @@ func parseOptions() Options {
 	}
 	options.dest = flag.Arg(0)
 
+	loggers.DebugFlag = options.debug
 	loggers.Printf(loggers.Debug, "options dest=%v \n", options.dest)
 	loggers.Printf(loggers.Debug, "options region=%v \n", options.region)
 	loggers.Printf(loggers.Debug, "options vault=%v \n", options.vault)
+	loggers.Printf(loggers.Debug, "options debug=%v \n", options.vault)
 	return options
 }
 
