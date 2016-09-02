@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"errors"
 	"time"
+	"code.cloudfoundry.org/bytefmt"
 )
 
 type archiveRetrieve struct {
@@ -45,6 +46,8 @@ type DownloadContext struct {
 	restorationContext             *awsutils.RestorationContext
 	bytesBySecond                  uint64
 	downloadSpeedAutoUpdate        bool
+	nbBytesToDownload              uint64
+	nbBytesDownloaded              uint64
 	maxArchivesRetrievingSize      uint64
 	archivesRetrievingSize         uint64
 	archivePartRetrieveListMaxSize int
@@ -82,6 +85,9 @@ func (downloadContext *DownloadContext) downloadArchives() {
 	rows := downloadContext.loadRows()
 	defer rows.Close()
 
+	downloadContext.loadTotalSize()
+	loggers.Printf(loggers.Info, "%v to restore\n", bytefmt.ByteSize(downloadContext.nbBytesToDownload))
+
 	downloadContext.archivePartRetrieveList = list.New()
 	downloadContext.archivesRetrievingSize = 0
 	downloadContext.hasRows = true
@@ -103,6 +109,7 @@ func (downloadContext *DownloadContext) startArchiveRetrievingJobs() {
 	for downloadContext.archivesRetrievingSize < downloadContext.maxArchivesRetrievingSize &&
 	downloadContext.archivePartRetrieveList.Len() < downloadContext.archivePartRetrieveListMaxSize &&
 	(downloadContext.hasRows || downloadContext.uncompletedRetrieve != nil) {
+		downloadContext.displayStatus("start retrieve jobs")
 		archiveToRetrieve := downloadContext.uncompletedRetrieve
 
 		if archiveToRetrieve == nil {
@@ -133,7 +140,7 @@ func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetr
 			if _, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + basePath); os.IsNotExist(err) {
 				archiveToRetrieve = &archiveRetrieve{archiveId, dbKey, fileSize, 0}
 			} else {
-				loggers.DebugPrintf("skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + basePath)
+				loggers.Printf(loggers.Debug, "skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + basePath)
 			}
 		}
 	}
@@ -156,7 +163,7 @@ func (downloadContext *DownloadContext) startArchivePartRetrieveJob(archiveToRet
 		awsutils.Archive{archiveToRetrieve.archiveId, archiveToRetrieve.size},
 		archiveToRetrieve.nextByteIndexToRetrieve,
 		sizeToRetrieve)
-	loggers.DebugPrintf("job has started for archive id %s to retrieve %v bytes from %v byte index\n", archiveToRetrieve.archiveId, sizeRetrieved, archiveToRetrieve.nextByteIndexToRetrieve)
+	loggers.Printf(loggers.Debug, "job has started for archive id %s to retrieve %v bytes from %v byte index\n", archiveToRetrieve.archiveId, sizeRetrieved, archiveToRetrieve.nextByteIndexToRetrieve)
 
 	archiveToRetrieve.nextByteIndexToRetrieve += sizeRetrieved
 
@@ -169,7 +176,7 @@ func (downloadContext *DownloadContext) startArchivePartRetrieveJob(archiveToRet
 
 func (downloadContext *DownloadContext) handleArchiveRetrieveCompletion(archiveToRetrieve *archiveRetrieve) {
 	if archiveToRetrieve.retrieveIsComplete() {
-		loggers.DebugPrintf("archive id %s has been completed retrieved\n", archiveToRetrieve.archiveId)
+		loggers.Printf(loggers.Debug, "archive id %s has been completed retrieved\n", archiveToRetrieve.archiveId)
 		downloadContext.uncompletedRetrieve = nil
 	} else {
 		downloadContext.uncompletedRetrieve = archiveToRetrieve
@@ -183,14 +190,16 @@ func (downloadContext *DownloadContext) downloadArchivesPartWhenReady() {
 
 	for archivesDownloadingSize < maxArchivesDownloadingSize && (downloadContext.archivePartRetrieveList.Len() > 0 || downloadContext.uncompletedDownload != nil) {
 		if (downloadContext.uncompletedDownload == nil && downloadContext.archivePartRetrieveList.Len() > 0) {
+			downloadContext.displayStatus("wait archive retrieve job")
 			downloadContext.uncompletedDownload = downloadContext.waitNextArchivePartIsRetrieved()
 		}
-
+		downloadContext.displayStatus("downloading")
 		archivePath := downloadContext.restorationContext.DestinationDirPath + "/" + getArchiveBasePath(downloadContext.db, downloadContext.uncompletedDownload.dbKey)
 		archivesDownloadingSizeLeft := maxArchivesDownloadingSize - archivesDownloadingSize
 		sizeDownloaded, duration := downloadArchive(downloadContext.restorationContext, downloadContext.uncompletedDownload, archivePath + ".tmp", downloadContext.nextByteIndexToDownload, archivesDownloadingSizeLeft)
 		totalDuration += duration
 		archivesDownloadingSize += sizeDownloaded
+		downloadContext.nbBytesDownloaded += sizeDownloaded
 		downloadContext.nextByteIndexToDownload += sizeDownloaded
 		downloadContext.archivesRetrievingSize -= sizeDownloaded
 
@@ -199,13 +208,17 @@ func (downloadContext *DownloadContext) downloadArchivesPartWhenReady() {
 	downloadContext.updateDownloadSpeed(archivesDownloadingSize, totalDuration)
 }
 
+func (downloadContext *DownloadContext) displayStatus(phase string) {
+	loggers.Printf(loggers.Info, "\r%-30s %02v%% restored", "(" + phase + ")", downloadContext.nbBytesDownloaded * 100 / downloadContext.nbBytesToDownload)
+}
+
 func (downloadContext *DownloadContext) updateDownloadSpeed(downloadedSize uint64, duration time.Duration) {
 	if (downloadContext.downloadSpeedAutoUpdate) {
 		downloadContext.bytesBySecond = uint64(float64(downloadedSize) / duration.Seconds())
 		if (downloadContext.bytesBySecond == 0) {
 			downloadContext.bytesBySecond = 1
 		}
-		loggers.DebugPrintf("new download speed : %v bytes/s\n", downloadContext.bytesBySecond)
+		loggers.Printf(loggers.Debug, "new download speed : %v bytes/s\n", downloadContext.bytesBySecond)
 	}
 }
 
@@ -224,7 +237,7 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(arch
 	utils.ExitIfError(err)
 	if uint64(stat.Size()) >= downloadContext.uncompletedDownload.size {
 		os.Rename(archiveBasePath + ".tmp", archiveBasePath)
-		loggers.DebugPrintf("file %v downloaded\n", downloadContext.restorationContext.DestinationDirPath + "/" + archiveBasePath)
+		loggers.Printf(loggers.Debug, "file %v downloaded\n", downloadContext.restorationContext.DestinationDirPath + "/" + archiveBasePath)
 	}
 }
 
@@ -260,6 +273,12 @@ func (downloadContext *DownloadContext) loadRows() *sql.Rows {
 	utils.ExitIfError(err)
 	downloadContext.rows = rows
 	return rows
+}
+
+func (downloadContext *DownloadContext) loadTotalSize() {
+	row := downloadContext.db.QueryRow("SELECT sum(fileSize) FROM file_info_tb")
+	err := row.Scan(&downloadContext.nbBytesToDownload)
+	utils.ExitIfError(err)
 }
 
 func getArchiveBasePath(db *sql.DB, key uint64) string {

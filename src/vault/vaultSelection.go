@@ -22,37 +22,37 @@ func selectRegionVaultFromSynologyVaults(synologyCoupleVaults []*SynologyCoupleV
 		synologyCoupleVaultToUse = synologyCoupleVaults[0]
 	default:
 		for _, synologyCoupleVault := range synologyCoupleVaults {
-			loggers.Info.Printf("%s:%s\n", synologyCoupleVault.Region, synologyCoupleVault.Name)
+			loggers.Printf(loggers.Info, "%s:%s\n", synologyCoupleVault.Region, synologyCoupleVault.Name)
 		}
 		for synologyCoupleVaultToUse == nil {
 			region := readRegionFromStdIn()
 			vault := readVaultFromStdIn()
 			synologyCoupleVaultToUse = getVaultIfExist(region, vault, synologyCoupleVaults)
 			if synologyCoupleVaultToUse == nil {
-				loggers.Info.Print("vault or region doesn't exist. Try again...")
+				loggers.Print(loggers.Info, "vault or region doesn't exist. Try again...\n")
 			}
 		}
 	}
 
 	if synologyCoupleVaultToUse != nil {
-		loggers.Info.Printf("synology backup vault used for the restoration: %s:%s", synologyCoupleVaultToUse.Region, synologyCoupleVaultToUse.Name)
+		loggers.Printf(loggers.Info, "synology backup vault used for the restoration: %s:%s\n", synologyCoupleVaultToUse.Region, synologyCoupleVaultToUse.Name)
 		return synologyCoupleVaultToUse.Region, synologyCoupleVaultToUse.Name
 	} else {
-		loggers.Error.Print("no synology backup vault found")
+		loggers.Print(loggers.Error, "no synology backup vault found\n")
 		return "", ""
 	}
 
 }
 
 func readRegionFromStdIn() string {
-	loggers.Info.Print("Select the region of the vault to use for the restoration:")
+	loggers.Print(loggers.Info, "Select the region of the vault to use for the restoration:")
 	region, err := inputs.StdinReader.ReadString('\n')
 	utils.ExitIfError(err)
 	return strings.TrimSuffix(region, "\n")
 }
 
 func readVaultFromStdIn() string {
-	loggers.Info.Print("Select the vault to use for the restoration:")
+	loggers.Print(loggers.Info, "Select the vault to use for the restoration:")
 	vault, err := inputs.StdinReader.ReadString('\n')
 	utils.ExitIfError(err)
 	return strings.TrimSuffix(vault, "\n")

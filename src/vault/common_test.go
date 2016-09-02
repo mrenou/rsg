@@ -12,6 +12,8 @@ import (
 )
 
 func InitTest() *bytes.Buffer {
+	loggers.DebugFlag = true
+	loggers.InitDefaultLog()
 	buffer := new(bytes.Buffer)
 	os.RemoveAll("../../testtmp")
 	os.MkdirAll("../../testtmp/cache", 0700)

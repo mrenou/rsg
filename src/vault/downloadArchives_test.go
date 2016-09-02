@@ -13,6 +13,8 @@ import (
 	"io/ioutil"
 	"strings"
 	"../utils"
+	"os"
+	"../loggers"
 )
 
 func mockStartPartialRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, vault, archiveId, bytesRange, jobIdToReturn string) *mock.Call {
@@ -88,7 +90,8 @@ func TestDownloadArchives_retrieve_and_download_file_in_one_part(t *testing.T) {
 
 func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T) {
 	// Given
-	InitTest()
+	buffer := InitTest()
+	loggers.InitLog(buffer, os.Stdout, os.Stdout, os.Stderr)
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	downloadContext := DownloadContext{

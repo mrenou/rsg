@@ -10,7 +10,7 @@ const S_1GB = 1024 * S_1MB
 
 func ExitIfError(err error) {
 	if (err != nil) {
-		loggers.Error.Print(err)
+		loggers.Print(loggers.Error, err)
 		os.Exit(1)
 	}
 }

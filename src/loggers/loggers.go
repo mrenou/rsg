@@ -2,31 +2,65 @@ package loggers
 
 import (
 	"os"
-	"log"
 	"io"
+	"fmt"
 )
 
+const (
+	Debug Level = iota
+	Info = iota
+	Warning = iota
+	Error = iota
+)
+
+type Level int
+
 var (
-	debugFlag bool = true
-	debug   *log.Logger
-	Info    *log.Logger
-	Warning *log.Logger
-	Error   *log.Logger
+	DebugFlag bool = false
+	debugWriter io.Writer
+	infoWriter io.Writer
+	warningWriter io.Writer
+	errorWriter io.Writer
 )
 
 func InitDefaultLog() {
 	InitLog(os.Stdout, os.Stdout, os.Stdout, os.Stderr)
 }
 
-func InitLog(debugWriter, infoWriter, warningWriter, errorWriter io.Writer) {
-	debug = log.New(debugWriter, "DEBUG: ", 0)
-	Info = log.New(infoWriter, "", 0)
-	Warning = log.New(warningWriter, "WARNING: ", 0)
-	Error = log.New(errorWriter, "ERROR: ", 0)
+func InitLog(pDebugWriter, pInfoWriter, pWarningWriter, pErrorWriter io.Writer) {
+	debugWriter = pDebugWriter
+	infoWriter = pInfoWriter
+	warningWriter = pWarningWriter
+	errorWriter = pErrorWriter
 }
 
-func DebugPrintf(format string, v ...interface{}) {
-	if (debugFlag) {
-		debug.Printf(format, v...)
+func Printf(level Level, format string, v ...interface{}) {
+	print(level, fmt.Sprintf(format, v...))
+}
+
+func Print(level Level, v ...interface{}) {
+	print(level, fmt.Sprint(v...))
+}
+
+func print(level Level, toPrint string) {
+	var writer io.Writer;
+	if level == Debug {
+		if DebugFlag == false {
+			return
+		}
+		writer = debugWriter
+		toPrint = "DEBUG: " + toPrint;
 	}
+	if level == Info {
+		writer = infoWriter
+	}
+	if level == Warning {
+		writer = warningWriter
+		toPrint = "WARNING: " + toPrint;
+	}
+	if level == Error {
+		writer = errorWriter
+		toPrint = "ERROR: " + toPrint;
+	}
+	fmt.Fprint(writer, toPrint)
 }

@@ -32,7 +32,7 @@ func DescribeJob(restorationContext *RestorationContext, vault, jobId string) (*
 		JobId:     aws.String(jobId),
 		VaultName: aws.String(vault),
 	}
-	loggers.DebugPrintf("describe job with params: %v\n", params)
+	loggers.Printf(loggers.Debug, "describe job with params: %v\n", params)
 	return restorationContext.GlacierClient.DescribeJob(params)
 }
 
@@ -59,7 +59,7 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 		VaultName: aws.String(vault),
 		Range: rangeToRetrieve,
 	}
-	loggers.DebugPrintf("get output job with params: %v\n", params)
+	loggers.Printf(loggers.Debug, "get output job with params: %v\n", params)
 	resp, err := restorationContext.GlacierClient.GetJobOutput(params)
 	utils.ExitIfError(err)
 	defer resp.Body.Close()
@@ -70,7 +70,7 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 		file, err = os.OpenFile(destPath, os.O_APPEND | os.O_WRONLY, 0600)
 	}
 	utils.ExitIfError(err)
-	loggers.DebugPrintf("copy file into: %v\n", destPath)
+	loggers.Printf(loggers.Debug, "copy file into: %v\n", destPath)
 	_, err = io.Copy(file, resp.Body)
 	utils.ExitIfError(err)
 }
@@ -104,7 +104,7 @@ func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vaul
 			RetrievalByteRange: aws.String(rangeToRetrieve),
 		},
 	}
-	loggers.DebugPrintf("start retrieve archive job with params: %v\n", params)
+	loggers.Printf(loggers.Debug, "start retrieve archive job with params: %v\n", params)
 	resp, err := restorationContext.GlacierClient.InitiateJob(params)
 	utils.ExitIfError(err)
 	return *resp.JobId, sizeToRetrieve
