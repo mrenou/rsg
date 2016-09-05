@@ -109,7 +109,7 @@ func parseOptions() Options {
 	loggers.Printf(loggers.Debug, "options dest=%v \n", options.dest)
 	loggers.Printf(loggers.Debug, "options region=%v \n", options.region)
 	loggers.Printf(loggers.Debug, "options vault=%v \n", options.vault)
-	loggers.Printf(loggers.Debug, "options debug=%v \n", options.vault)
+	loggers.Printf(loggers.Debug, "options debug=%v \n", options.debug)
 	return options
 }
 

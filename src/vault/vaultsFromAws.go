@@ -22,6 +22,7 @@ type SynologyCoupleVault struct {
 }
 
 func GetSynologyVaults(accountId string, sessionValue *session.Session, regionFilter, vaultFilter string) ([]*SynologyCoupleVault, error) {
+	loggers.Printf(loggers.Info, "search synology backup vaults...\n")
 	if regionFilter != "" {
 		return getSynologyVaultsOnOneRegions(accountId, sessionValue, regionFilter, vaultFilter)
 	}
@@ -51,7 +52,7 @@ func getSynologyVaultsOnAllRegions(accountId string, sessionValue *session.Sessi
 }
 
 func getSynologyVaultsForRegion(accountId string, glacierClient glacieriface.GlacierAPI, region string, vaultFilter string) ([]*SynologyCoupleVault, error) {
-	loggers.Printf(loggers.Debug, "get vault for region %s with vaultFilter=%s\n", region, vaultFilter)
+	loggers.Printf(loggers.Debug, "get vaults for region %s with vaultFilter=%s\n", region, vaultFilter)
 	haveResults := true
 	possibleDataVaults := map[string]*glacier.DescribeVaultOutput{}
 	synologyCoupleVaults := []*SynologyCoupleVault{}
