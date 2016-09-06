@@ -25,7 +25,7 @@ func InitTest() *bytes.Buffer {
 }
 
 func DefaultRestorationContext(glacierMock *GlacierMock) *awsutils.RestorationContext {
-	return &awsutils.RestorationContext{glacierMock, "../../testtmp/cache", "region", "vault", "vault_mapping", "acountId", awsutils.RegionVaultCache{}, "../../testtmp/dest", []string{}}
+	return &awsutils.RestorationContext{glacierMock, "../../testtmp/cache", "region", "vault", "vault_mapping", "acountId", awsutils.RegionVaultCache{}, "../../testtmp/dest", []string{}, 0}
 }
 
 type SessionMock struct {

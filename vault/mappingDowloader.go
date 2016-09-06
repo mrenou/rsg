@@ -13,6 +13,7 @@ import (
 	"errors"
 	"os"
 	"fmt"
+	"time"
 )
 
 func DownloadMappingArchive(restorationContext *awsutils.RestorationContext) {
@@ -33,7 +34,10 @@ func downloadMappingArchive(restorationContext *awsutils.RestorationContext) {
 		awsutils.WaitJobIsCompleted(restorationContext, restorationContext.MappingVault, jobId)
 		loggers.Printf(loggers.Info, "job has finished: %s\n", jobId)
 	}
-	awsutils.DownloadArchiveTo(restorationContext, restorationContext.MappingVault, jobId, restorationContext.GetMappingFilePath())
+	start := time.Now()
+	sizeDownloaded := awsutils.DownloadArchiveTo(restorationContext, restorationContext.MappingVault, jobId, restorationContext.GetMappingFilePath())
+	restorationContext.BytesBySecond = uint64(float64(sizeDownloaded) / time.Since(start).Seconds())
+	loggers.Printf(loggers.Debug, "new download speed : %v bytes/s\n", restorationContext.BytesBySecond)
 	restorationContext.RegionVaultCache.MappingArchive = nil
 	restorationContext.RegionVaultCache.MappingVaultRetrieveJobId = ""
 	restorationContext.WriteRegionVaultCache()

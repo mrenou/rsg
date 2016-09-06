@@ -44,11 +44,11 @@ func JobIsCompleted(restorationContext *RestorationContext, vault, jobId string)
 	}
 }
 
-func DownloadArchiveTo(restorationContext *RestorationContext, vault, jobId string, filename string) {
-	DownloadPartialArchiveTo(restorationContext, vault, jobId, filename, 0, 0)
+func DownloadArchiveTo(restorationContext *RestorationContext, vault, jobId string, filename string) uint64 {
+	return DownloadPartialArchiveTo(restorationContext, vault, jobId, filename, 0, 0)
 }
 
-func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, jobId string, destPath string, fromByte, sizeToDownload uint64) {
+func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, jobId string, destPath string, fromByte, sizeToDownload uint64) uint64 {
 	var rangeToRetrieve *string = nil
 	if sizeToDownload != 0 {
 		rangeToRetrieve = aws.String(strconv.FormatUint(fromByte, 10) + "-" + strconv.FormatUint(fromByte + sizeToDownload - 1, 10))
@@ -74,6 +74,7 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 	written, err := io.Copy(file, resp.Body)
 	loggers.Printf(loggers.Debug, "%v bytes copied\n", written)
 	utils.ExitIfError(err)
+	return uint64(written)
 }
 
 func StartRetrieveArchiveJob(restorationContext *RestorationContext, vault string, archive Archive) string {

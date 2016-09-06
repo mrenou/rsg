@@ -13,6 +13,8 @@ import (
 	"time"
 	"code.cloudfoundry.org/bytefmt"
 	"strings"
+	"rsg/inputs"
+	"rsg/speedtest"
 )
 
 type archiveRetrieve struct {
@@ -66,11 +68,28 @@ func (downloadContext *DownloadContext) archivesRetrievingSizeLeft() uint64 {
 func DownloadArchives(restorationContext *awsutils.RestorationContext) {
 	downloadContext := new(DownloadContext)
 	downloadContext.restorationContext = restorationContext
-	downloadContext.bytesBySecond = uint64(utils.S_1MB)
 	downloadContext.downloadSpeedAutoUpdate = true
 	downloadContext.archivePartRetrieveListMaxSize = utils.S_1GB / archiveRetrieveStructSize
 	downloadContext.maxArchivesRetrievingSize = downloadContext.bytesBySecond * uint64(_4hoursInSeconds)
+	if downloadContext.bytesBySecond == 0 {
+		downloadContext.bytesBySecond = detectOrSelectDownloadSpeed(restorationContext)
+	}
 	downloadContext.downloadArchives()
+}
+
+func detectOrSelectDownloadSpeed(restorationContext *awsutils.RestorationContext) uint64 {
+	downloadSpeed, err := speedtest.SpeedTest()
+	if err != nil {
+		loggers.Printf(loggers.Error, "cannot test download speed : %v\n", err)
+		for downloadSpeed == 0 || err != nil {
+			downloadSpeed, err = bytefmt.ToBytes(inputs.QueryString("select your download speed by second (ex 10K, 256K, 1M, 10M):"))
+			if err != nil {
+				loggers.Printf(loggers.Error, "%v\n", err)
+			}
+		}
+	}
+	loggers.Printf(loggers.Info, "download speed used : %v\n", bytefmt.ByteSize(downloadSpeed))
+	return downloadSpeed
 }
 
 func (downloadContext *DownloadContext) downloadArchives() {
@@ -284,8 +303,8 @@ func downloadArchivePart(restorationContext *awsutils.RestorationContext, archiv
 		sizeToDownload = nbBytesCanDownload
 	}
 	start := time.Now()
-	awsutils.DownloadPartialArchiveTo(restorationContext, restorationContext.Vault, archivePartRetrieve.jobId, restorationContext.DestinationDirPath + "/" + archivePartRetrieve.archiveId, fromByteIndex, sizeToDownload)
-	return sizeToDownload, time.Since(start)
+	sizeDownloaded := awsutils.DownloadPartialArchiveTo(restorationContext, restorationContext.Vault, archivePartRetrieve.jobId, restorationContext.DestinationDirPath + "/" + archivePartRetrieve.archiveId, fromByteIndex, sizeToDownload)
+	return sizeDownloaded, time.Since(start)
 }
 
 func (downloadContext *DownloadContext) loadDb() *sql.DB {
@@ -308,7 +327,7 @@ func (downloadContext *DownloadContext) loadArchives() *sql.Rows {
 			where += "basepath LIKE '" + filter + "'"
 		}
 	}
-	sqlQuery := "SELECT archiveId, fileSize FROM file_info_tb "  + where + " ORDER BY key"
+	sqlQuery := "SELECT archiveId, fileSize FROM file_info_tb " + where + " ORDER BY key"
 	loggers.Printf(loggers.Debug, "Query mapping file for archives with %v\n", sqlQuery)
 	rows, err := downloadContext.db.Query(sqlQuery)
 	utils.ExitIfError(err)

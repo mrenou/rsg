@@ -1,7 +1,6 @@
 package vault
 
 import (
-	"strings"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"rsg/loggers"
 	"rsg/utils"
@@ -25,8 +24,8 @@ func selectRegionVaultFromSynologyVaults(synologyCoupleVaults []*SynologyCoupleV
 			loggers.Printf(loggers.Info, "%s:%s\n", synologyCoupleVault.Region, synologyCoupleVault.Name)
 		}
 		for synologyCoupleVaultToUse == nil {
-			region := readRegionFromStdIn()
-			vault := readVaultFromStdIn()
+			region := inputs.QueryString("Select the region of the vault to use for the restoration:")
+			vault := inputs.QueryString("Select the vault to use for the restoration:")
 			synologyCoupleVaultToUse = getVaultIfExist(region, vault, synologyCoupleVaults)
 			if synologyCoupleVaultToUse == nil {
 				loggers.Print(loggers.Info, "vault or region doesn't exist. Try again...\n")
@@ -42,20 +41,6 @@ func selectRegionVaultFromSynologyVaults(synologyCoupleVaults []*SynologyCoupleV
 		return "", ""
 	}
 
-}
-
-func readRegionFromStdIn() string {
-	loggers.Print(loggers.Info, "Select the region of the vault to use for the restoration:")
-	region, err := inputs.StdinReader.ReadString('\n')
-	utils.ExitIfError(err)
-	return strings.TrimSuffix(region, "\n")
-}
-
-func readVaultFromStdIn() string {
-	loggers.Print(loggers.Info, "Select the vault to use for the restoration:")
-	vault, err := inputs.StdinReader.ReadString('\n')
-	utils.ExitIfError(err)
-	return strings.TrimSuffix(vault, "\n")
 }
 
 func getVaultIfExist(region, vault string, synologyCoupleVaults []*SynologyCoupleVault) *SynologyCoupleVault {
