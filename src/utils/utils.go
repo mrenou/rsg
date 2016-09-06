@@ -3,6 +3,7 @@ package utils
 import "os"
 import (
 	"../loggers"
+	"io"
 )
 
 const S_1MB = 1024 * 1024
@@ -22,5 +23,24 @@ func Contains(values []string, toFind string) bool {
 		}
 	}
 	return false
+}
+
+func CopyFile(dst, src string) error {
+	s, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	// no need to check errors on read only file, we already got everything
+	// we need from the filesystem, so nothing can go wrong now.
+	defer s.Close()
+	d, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(d, s); err != nil {
+		d.Close()
+		return err
+	}
+	return d.Close()
 }
 

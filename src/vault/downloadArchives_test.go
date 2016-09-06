@@ -13,8 +13,6 @@ import (
 	"io/ioutil"
 	"strings"
 	"../utils"
-	"os"
-	"../loggers"
 )
 
 func mockStartPartialRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, vault, archiveId, bytesRange, jobIdToReturn string) *mock.Call {
@@ -67,9 +65,9 @@ func TestDownloadArchives_retrieve_and_download_file_in_one_part(t *testing.T) {
 		archivesRetrievingSize: 0,
 		archivePartRetrieveListMaxSize: 1,
 		archivePartRetrieveList: nil,
-		hasRows: false,
+		hasArchiveRows: false,
 		db: nil,
-		rows:nil,
+		archiveRows:nil,
 	}
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
@@ -90,8 +88,7 @@ func TestDownloadArchives_retrieve_and_download_file_in_one_part(t *testing.T) {
 
 func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T) {
 	// Given
-	buffer := InitTest()
-	loggers.InitLog(buffer, os.Stdout, os.Stdout, os.Stderr)
+	InitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	downloadContext := DownloadContext{
@@ -102,9 +99,9 @@ func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T
 		archivesRetrievingSize: 0,
 		archivePartRetrieveListMaxSize: 10,
 		archivePartRetrieveList: nil,
-		hasRows: false,
+		hasArchiveRows: false,
 		db: nil,
-		rows:nil,
+		archiveRows:nil,
 	}
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
@@ -134,6 +131,125 @@ func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T
 	// Then
 	assertFileContent(t, "../../testtmp/dest/data/file1.txt", strings.Repeat("_", 4194299) + "hello")
 }
+
+func TestDownloadArchives_retrieve_and_download_2_files_with_multipart(t *testing.T) {
+	// Given
+	InitTest()
+	glacierMock := new(GlacierMock)
+	restorationContext := DefaultRestorationContext(glacierMock)
+	downloadContext := DownloadContext{
+		restorationContext: restorationContext,
+		bytesBySecond: 3496, // 1048800 on 5 min
+		maxArchivesRetrievingSize: utils.S_1MB * 2,
+		downloadSpeedAutoUpdate: false,
+		archivesRetrievingSize: 0,
+		archivePartRetrieveListMaxSize: 10,
+		archivePartRetrieveList: nil,
+		hasArchiveRows: false,
+		db: nil,
+		archiveRows:nil,
+	}
+
+	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
+	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file1.txt', 'archiveId1', 4194304);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file2.txt', 'archiveId2', 2097152);")
+	db.Close()
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId1", "0-2097151", "jobId1").Once()
+	mockDescribeJob(glacierMock, restorationContext, "jobId1", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId1", restorationContext.Vault, "0-1048799", []byte(strings.Repeat("_", 1048800))).Once()
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId1", "2097152-3145727", "jobId2").Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId1", restorationContext.Vault, "1048800-2097151", []byte(strings.Repeat("_", 1048352))).Once()
+	mockDescribeJob(glacierMock, restorationContext, "jobId2", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId2", restorationContext.Vault, "0-447", []byte(strings.Repeat("_", 448))).Once()
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId1", "3145728-4194303", "jobId3").Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId2", restorationContext.Vault, "448-1048575", []byte(strings.Repeat("_", 1048128))).Once()
+	mockDescribeJob(glacierMock, restorationContext, "jobId3", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId3", restorationContext.Vault, "0-671", []byte(strings.Repeat("_", 672)))
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId2", "0-1048575", "jobId4").Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId3", restorationContext.Vault, "672-1048575", append([]byte(strings.Repeat("_", 1047899)), []byte("hello")...))
+	mockDescribeJob(glacierMock, restorationContext, "jobId4", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId4", restorationContext.Vault, "0-895", []byte(strings.Repeat("_", 896)))
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId2", "1048576-2097151", "jobId5").Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId4", restorationContext.Vault, "896-1048575", []byte(strings.Repeat("_", 1047680)))
+	mockDescribeJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "0-1119", []byte(strings.Repeat("_", 1120)))
+
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "1120-1048575",  append([]byte(strings.Repeat("_", 1047451)), []byte("olleh")...))
+
+	// When
+	downloadContext.downloadArchives()
+
+	// Then
+	assertFileContent(t, "../../testtmp/dest/data/file1.txt", strings.Repeat("_", 4194299) + "hello")
+	assertFileContent(t, "../../testtmp/dest/data/file2.txt", strings.Repeat("_", 2097147) + "olleh")
+}
+
+func TestDownloadArchives_retrieve_and_download_3_files_with_2_identical(t *testing.T) {
+	// Given
+	InitTest()
+	glacierMock := new(GlacierMock)
+	restorationContext := DefaultRestorationContext(glacierMock)
+	downloadContext := DownloadContext{
+		restorationContext: restorationContext,
+		bytesBySecond: 3496, // 1048800 on 5 min
+		maxArchivesRetrievingSize: utils.S_1MB * 2,
+		downloadSpeedAutoUpdate: false,
+		archivesRetrievingSize: 0,
+		archivePartRetrieveListMaxSize: 10,
+		archivePartRetrieveList: nil,
+		hasArchiveRows: false,
+		db: nil,
+		archiveRows:nil,
+	}
+
+	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
+	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file1.txt', 'archiveId1', 4194304);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file2.txt', 'archiveId2', 2097152);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file3.txt', 'archiveId1', 4194304);")
+	db.Close()
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId1", "0-2097151", "jobId1").Once()
+	mockDescribeJob(glacierMock, restorationContext, "jobId1", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId1", restorationContext.Vault, "0-1048799", []byte(strings.Repeat("_", 1048800))).Once()
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId1", "2097152-3145727", "jobId2").Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId1", restorationContext.Vault, "1048800-2097151", []byte(strings.Repeat("_", 1048352))).Once()
+	mockDescribeJob(glacierMock, restorationContext, "jobId2", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId2", restorationContext.Vault, "0-447", []byte(strings.Repeat("_", 448))).Once()
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId1", "3145728-4194303", "jobId3").Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId2", restorationContext.Vault, "448-1048575", []byte(strings.Repeat("_", 1048128))).Once()
+	mockDescribeJob(glacierMock, restorationContext, "jobId3", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId3", restorationContext.Vault, "0-671", []byte(strings.Repeat("_", 672)))
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId2", "0-1048575", "jobId4").Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId3", restorationContext.Vault, "672-1048575", append([]byte(strings.Repeat("_", 1047899)), []byte("hello")...))
+	mockDescribeJob(glacierMock, restorationContext, "jobId4", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId4", restorationContext.Vault, "0-895", []byte(strings.Repeat("_", 896)))
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId2", "1048576-2097151", "jobId5").Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId4", restorationContext.Vault, "896-1048575", []byte(strings.Repeat("_", 1047680)))
+	mockDescribeJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "0-1119", []byte(strings.Repeat("_", 1120)))
+
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "1120-1048575",  append([]byte(strings.Repeat("_", 1047451)), []byte("olleh")...))
+
+	// When
+	downloadContext.downloadArchives()
+
+	// Then
+	assertFileContent(t, "../../testtmp/dest/data/file1.txt", strings.Repeat("_", 4194299) + "hello")
+	assertFileContent(t, "../../testtmp/dest/data/file2.txt", strings.Repeat("_", 2097147) + "olleh")
+	assertFileContent(t, "../../testtmp/dest/data/file3.txt", strings.Repeat("_", 4194299) + "hello")
+}
+
 
 func assertFileContent(t *testing.T, filePath, expected string) {
 	data, _ := ioutil.ReadFile(filePath)

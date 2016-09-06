@@ -319,12 +319,11 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but
 
 	outputs := strings.Split(string(buffer.Bytes()), "\n")
 
-	assert.True(t, regexp.MustCompile("local mapping archive already exists with last modification date .+, retrieve a new mapping file \\?\\[y/N\\]").MatchString(outputs[0]))
-	assert.Equal(t, "job to find mapping archive id has started (can last up to 4 hours): inventoryMappingJobId", outputs[1])
-	assert.Equal(t, "job has finished: inventoryMappingJobId", outputs[2])
-	assert.Equal(t, "job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId", outputs[3])
-	assert.Equal(t, "job has finished: retrieveMappingJobId", outputs[4])
-	assert.Equal(t, "mapping archive has been downloaded", outputs[5])
+	assert.True(t, regexp.MustCompile("local mapping archive already exists with last modification date .+, retrieve a new mapping file \\?\\[y/N\\]job to find mapping archive id has started \\(can last up to 4 hours\\): inventoryMappingJobId").MatchString(outputs[0]))
+	assert.Equal(t, "job has finished: inventoryMappingJobId", outputs[1])
+	assert.Equal(t, "job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId", outputs[2])
+	assert.Equal(t, "job has finished: retrieveMappingJobId", outputs[3])
+	assert.Equal(t, "mapping archive has been downloaded", outputs[4])
 }
 
 func assertMappingArchive(t *testing.T, expected string) {

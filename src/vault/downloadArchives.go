@@ -16,7 +16,6 @@ import (
 
 type archiveRetrieve struct {
 	archiveId               string
-	dbKey                   uint64
 	size                    uint64
 	nextByteIndexToRetrieve uint64
 }
@@ -32,7 +31,6 @@ func (archiveRetrieve *archiveRetrieve) retrieveIsComplete() bool {
 type archivePartRetrieve struct {
 	jobId         string
 	archiveId     string
-	dbKey         uint64
 	retrievedSize uint64
 	size          uint64
 }
@@ -52,9 +50,9 @@ type DownloadContext struct {
 	archivesRetrievingSize         uint64
 	archivePartRetrieveListMaxSize int
 	archivePartRetrieveList        *list.List
-	hasRows                        bool
+	hasArchiveRows                 bool
 	db                             *sql.DB
-	rows                           *sql.Rows
+	archiveRows                    *sql.Rows
 	uncompletedRetrieve            *archiveRetrieve
 	uncompletedDownload            *archivePartRetrieve
 	nextByteIndexToDownload        uint64
@@ -79,10 +77,13 @@ func (downloadContext *DownloadContext) downloadArchives() {
 		utils.ExitIfError(errors.New("max archives retrieving size cannot be less than 1MB"))
 	}
 
+	err := os.MkdirAll(filepath.Dir(downloadContext.restorationContext.DestinationDirPath + "/"), 0700)
+	utils.ExitIfError(err)
+
 	db := downloadContext.loadDb()
 	defer db.Close()
 
-	rows := downloadContext.loadRows()
+	rows := downloadContext.loadArchives()
 	defer rows.Close()
 
 	downloadContext.loadTotalSize()
@@ -90,7 +91,7 @@ func (downloadContext *DownloadContext) downloadArchives() {
 
 	downloadContext.archivePartRetrieveList = list.New()
 	downloadContext.archivesRetrievingSize = 0
-	downloadContext.hasRows = true
+	downloadContext.hasArchiveRows = true
 
 	for !downloadContext.allFilesHasBeenProcessed() {
 		downloadContext.startArchiveRetrievingJobs()
@@ -99,7 +100,7 @@ func (downloadContext *DownloadContext) downloadArchives() {
 }
 
 func (downloadContext *DownloadContext) allFilesHasBeenProcessed() bool {
-	return !downloadContext.hasRows &&
+	return !downloadContext.hasArchiveRows &&
 	downloadContext.archivePartRetrieveList.Len() == 0 &&
 	downloadContext.uncompletedRetrieve == nil &&
 	downloadContext.uncompletedDownload == nil
@@ -108,17 +109,15 @@ func (downloadContext *DownloadContext) allFilesHasBeenProcessed() bool {
 func (downloadContext *DownloadContext) startArchiveRetrievingJobs() {
 	for downloadContext.archivesRetrievingSize < downloadContext.maxArchivesRetrievingSize &&
 	downloadContext.archivePartRetrieveList.Len() < downloadContext.archivePartRetrieveListMaxSize &&
-	(downloadContext.hasRows || downloadContext.uncompletedRetrieve != nil) {
+	(downloadContext.hasArchiveRows || downloadContext.uncompletedRetrieve != nil) {
 		downloadContext.displayStatus("start retrieve jobs")
-		archiveToRetrieve := downloadContext.uncompletedRetrieve
-
-		if archiveToRetrieve == nil {
-			archiveToRetrieve = downloadContext.findNextArchiveToRetrieve()
+		if downloadContext.uncompletedRetrieve == nil {
+			downloadContext.uncompletedRetrieve = downloadContext.findNextArchiveToRetrieve()
 		}
-		if archiveToRetrieve != nil {
-			sizeToRetreive, isEndOfFile := downloadContext.computeSizeToRetrieve(archiveToRetrieve)
+		if downloadContext.uncompletedRetrieve != nil {
+			sizeToRetreive, isEndOfFile := downloadContext.computeSizeToRetrieve(downloadContext.uncompletedRetrieve)
 			if (isEndOfFile || sizeToRetreive / utils.S_1MB > 0) {
-				downloadContext.startArchivePartRetrieveJob(archiveToRetrieve, sizeToRetreive)
+				downloadContext.startArchivePartRetrieveJob(downloadContext.uncompletedRetrieve, sizeToRetreive)
 			} else {
 				break
 			}
@@ -128,19 +127,27 @@ func (downloadContext *DownloadContext) startArchiveRetrievingJobs() {
 
 func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetrieve {
 	var archiveToRetrieve *archiveRetrieve;
-	for archiveToRetrieve == nil && downloadContext.hasRows {
-		downloadContext.hasRows = downloadContext.rows.Next()
-		if downloadContext.hasRows {
-			var dbKey uint64
-			var basePath string
+	for archiveToRetrieve == nil && downloadContext.hasArchiveRows {
+
+		downloadContext.hasArchiveRows = downloadContext.archiveRows.Next()
+		if downloadContext.hasArchiveRows {
 			var archiveId string
 			var fileSize uint64
-			err := downloadContext.rows.Scan(&dbKey, &basePath, &archiveId, &fileSize)
+			err := downloadContext.archiveRows.Scan(&archiveId, &fileSize)
 			utils.ExitIfError(err)
-			if _, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + basePath); os.IsNotExist(err) {
-				archiveToRetrieve = &archiveRetrieve{archiveId, dbKey, fileSize, 0}
-			} else {
-				loggers.Printf(loggers.Debug, "skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + basePath)
+
+			pathRows := downloadContext.loadPaths(archiveId)
+			defer pathRows.Close()
+
+			for pathRows.Next() {
+				var path string
+				pathRows.Scan(&path)
+				if _, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + path); os.IsNotExist(err) {
+					archiveToRetrieve = &archiveRetrieve{archiveId, fileSize, 0}
+					break
+				} else {
+					loggers.Printf(loggers.Debug, "skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + path)
+				}
 			}
 		}
 	}
@@ -167,7 +174,7 @@ func (downloadContext *DownloadContext) startArchivePartRetrieveJob(archiveToRet
 
 	archiveToRetrieve.nextByteIndexToRetrieve += sizeRetrieved
 
-	archivePartRetrieve := &archivePartRetrieve{jobId, archiveToRetrieve.archiveId, archiveToRetrieve.dbKey, sizeRetrieved, archiveToRetrieve.size}
+	archivePartRetrieve := &archivePartRetrieve{jobId, archiveToRetrieve.archiveId, sizeRetrieved, archiveToRetrieve.size}
 	downloadContext.archivesRetrievingSize += sizeRetrieved
 	downloadContext.archivePartRetrieveList.PushFront(archivePartRetrieve)
 
@@ -178,8 +185,6 @@ func (downloadContext *DownloadContext) handleArchiveRetrieveCompletion(archiveT
 	if archiveToRetrieve.retrieveIsComplete() {
 		loggers.Printf(loggers.Debug, "archive id %s has been completed retrieved\n", archiveToRetrieve.archiveId)
 		downloadContext.uncompletedRetrieve = nil
-	} else {
-		downloadContext.uncompletedRetrieve = archiveToRetrieve
 	}
 }
 
@@ -194,16 +199,15 @@ func (downloadContext *DownloadContext) downloadArchivesPartWhenReady() {
 			downloadContext.uncompletedDownload = downloadContext.waitNextArchivePartIsRetrieved()
 		}
 		downloadContext.displayStatus("downloading")
-		archivePath := downloadContext.restorationContext.DestinationDirPath + "/" + getArchiveBasePath(downloadContext.db, downloadContext.uncompletedDownload.dbKey)
 		archivesDownloadingSizeLeft := maxArchivesDownloadingSize - archivesDownloadingSize
-		sizeDownloaded, duration := downloadArchive(downloadContext.restorationContext, downloadContext.uncompletedDownload, archivePath + ".tmp", downloadContext.nextByteIndexToDownload, archivesDownloadingSizeLeft)
+		sizeDownloaded, duration := downloadArchivePart(downloadContext.restorationContext, downloadContext.uncompletedDownload, downloadContext.nextByteIndexToDownload, archivesDownloadingSizeLeft)
 		totalDuration += duration
 		archivesDownloadingSize += sizeDownloaded
 		downloadContext.nbBytesDownloaded += sizeDownloaded
 		downloadContext.nextByteIndexToDownload += sizeDownloaded
 		downloadContext.archivesRetrievingSize -= sizeDownloaded
 
-		downloadContext.handleArchivePartDownloadCompletion(archivePath)
+		downloadContext.handleArchivePartDownloadCompletion(downloadContext.restorationContext)
 	}
 	downloadContext.updateDownloadSpeed(archivesDownloadingSize, totalDuration)
 }
@@ -222,22 +226,43 @@ func (downloadContext *DownloadContext) updateDownloadSpeed(downloadedSize uint6
 	}
 }
 
-func (downloadContext *DownloadContext) handleArchivePartDownloadCompletion(archiveBasePath string) {
+func (downloadContext *DownloadContext) handleArchivePartDownloadCompletion(restorationContext *awsutils.RestorationContext) {
 	if (downloadContext.nextByteIndexToDownload >= downloadContext.uncompletedDownload.retrievedSize) {
-		downloadContext.handleArchiveFileDownloadCompletion(archiveBasePath)
+		downloadContext.handleArchiveFileDownloadCompletion(restorationContext)
 		downloadContext.uncompletedDownload = nil
 		downloadContext.nextByteIndexToDownload = 0
 	}
 }
 
-func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(archiveBasePath string) {
-	file, err := os.Open(archiveBasePath + ".tmp")
+func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(restorationContext *awsutils.RestorationContext) {
+	file, err := os.Open(restorationContext.DestinationDirPath + "/" + downloadContext.uncompletedDownload.archiveId)
 	utils.ExitIfError(err)
 	stat, err := file.Stat()
 	utils.ExitIfError(err)
 	if uint64(stat.Size()) >= downloadContext.uncompletedDownload.size {
-		os.Rename(archiveBasePath + ".tmp", archiveBasePath)
-		loggers.Printf(loggers.Debug, "file %v downloaded\n", downloadContext.restorationContext.DestinationDirPath + "/" + archiveBasePath)
+		loggers.Printf(loggers.Debug, "archive %v downloaded\n", downloadContext.uncompletedDownload.archiveId)
+
+		pathRows := downloadContext.loadPaths(downloadContext.uncompletedDownload.archiveId)
+		defer pathRows.Close()
+		var previousPath string
+		if pathRows.Next() {
+			pathRows.Scan(&previousPath)
+		}
+		for pathRows.Next() {
+			var path string
+			pathRows.Scan(&path)
+			err := os.MkdirAll(filepath.Dir(downloadContext.restorationContext.DestinationDirPath + "/" + previousPath), 0700)
+			utils.ExitIfError(err)
+			utils.CopyFile(restorationContext.DestinationDirPath + "/" + previousPath, restorationContext.DestinationDirPath + "/" + downloadContext.uncompletedDownload.archiveId)
+			loggers.Printf(loggers.Debug, "file %v restored (copy from %v)\n", downloadContext.restorationContext.DestinationDirPath + "/" + previousPath, downloadContext.uncompletedDownload.archiveId)
+			previousPath = path;
+		}
+		if previousPath != "" {
+			err := os.MkdirAll(filepath.Dir(downloadContext.restorationContext.DestinationDirPath + "/" + previousPath), 0700)
+			utils.ExitIfError(err)
+			os.Rename(restorationContext.DestinationDirPath + "/" + downloadContext.uncompletedDownload.archiveId, restorationContext.DestinationDirPath + "/" + previousPath)
+			loggers.Printf(loggers.Debug, "file %v restored (rename from %v)\n", downloadContext.restorationContext.DestinationDirPath + "/" + previousPath, downloadContext.uncompletedDownload.archiveId)
+		}
 	}
 }
 
@@ -249,15 +274,13 @@ func (downloadContext *DownloadContext) waitNextArchivePartIsRetrieved() *archiv
 	return archivePartRetrieve
 }
 
-func downloadArchive(restorationContext *awsutils.RestorationContext, archivePartRetrieve *archivePartRetrieve, archivePath string, fromByteIndex, nbBytesCanDownload uint64) (uint64, time.Duration) {
+func downloadArchivePart(restorationContext *awsutils.RestorationContext, archivePartRetrieve *archivePartRetrieve, fromByteIndex, nbBytesCanDownload uint64) (uint64, time.Duration) {
 	sizeToDownload := archivePartRetrieve.retrievedSize - fromByteIndex
 	if (sizeToDownload > nbBytesCanDownload) {
 		sizeToDownload = nbBytesCanDownload
 	}
-	err := os.MkdirAll(filepath.Dir(archivePath), 0700)
-	utils.ExitIfError(err)
 	start := time.Now()
-	awsutils.DownloadPartialArchiveTo(restorationContext, restorationContext.Vault, archivePartRetrieve.jobId, archivePath, fromByteIndex, sizeToDownload)
+	awsutils.DownloadPartialArchiveTo(restorationContext, restorationContext.Vault, archivePartRetrieve.jobId, restorationContext.DestinationDirPath + "/" + archivePartRetrieve.archiveId, fromByteIndex, sizeToDownload)
 	return sizeToDownload, time.Since(start)
 }
 
@@ -268,10 +291,19 @@ func (downloadContext *DownloadContext) loadDb() *sql.DB {
 	return db
 }
 
-func (downloadContext *DownloadContext) loadRows() *sql.Rows {
-	rows, err := downloadContext.db.Query("SELECT key, basePath, archiveId, fileSize FROM file_info_tb ORDER BY key")
+func (downloadContext *DownloadContext) loadArchives() *sql.Rows {
+	rows, err := downloadContext.db.Query("SELECT archiveId, fileSize FROM file_info_tb ORDER BY key")
 	utils.ExitIfError(err)
-	downloadContext.rows = rows
+	downloadContext.archiveRows = rows
+	return rows
+}
+
+func (downloadContext *DownloadContext) loadPaths(archiveId string) *sql.Rows {
+	stmt, err := downloadContext.db.Prepare("SELECT basePath FROM file_info_tb WHERE archiveId = ?")
+	utils.ExitIfError(err)
+	defer stmt.Close()
+	rows, err := stmt.Query(archiveId)
+	utils.ExitIfError(err)
 	return rows
 }
 
@@ -281,14 +313,3 @@ func (downloadContext *DownloadContext) loadTotalSize() {
 	utils.ExitIfError(err)
 }
 
-func getArchiveBasePath(db *sql.DB, key uint64) string {
-	stmt, err := db.Prepare("SELECT basePath FROM file_info_tb where key = ?")
-	utils.ExitIfError(err)
-	defer stmt.Close()
-	row := stmt.QueryRow(key)
-	utils.ExitIfError(err)
-	var basePath string;
-	err = row.Scan(&basePath)
-	utils.ExitIfError(err)
-	return basePath
-}

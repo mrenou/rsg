@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"bufio"
 	"bytes"
-	"strings"
 )
 
 func TestCheckDestination_dest_not_exist(t *testing.T) {
@@ -42,11 +41,7 @@ func TestCheckDestination_answer_no_but_not_confirm_when_dest_already_exist(t *t
 		assert.Fail(t, "../../testtmp/dest/data directory should exist")
 	}
 
-	outputs := strings.Split(string(buffer.Bytes()), "\n")
-	assert.Equal(t, len(outputs), 3)
-	assert.Equal(t, "destination directory already exists, do you want to keep existing files ?[Y/n]", outputs[0])
-	assert.Equal(t, "are you sure, all existing files restored will be deleted ?[y/N]", outputs[1])
-	assert.Equal(t, "", outputs[2])
+	assert.Equal(t, "destination directory already exists, do you want to keep existing files ?[Y/n]are you sure, all existing files restored will be deleted ?[y/N]", string(buffer.Bytes()))
 }
 
 func TestCheckDestination_answer_no_and_confirm_when_dest_already_exist(t *testing.T) {
@@ -64,11 +59,7 @@ func TestCheckDestination_answer_no_and_confirm_when_dest_already_exist(t *testi
 		assert.Fail(t, "../../testtmp/dest/data directory should not exist")
 	}
 
-	outputs := strings.Split(string(buffer.Bytes()), "\n")
-	assert.Equal(t, len(outputs), 3)
-	assert.Equal(t, "destination directory already exists, do you want to keep existing files ?[Y/n]", outputs[0])
-	assert.Equal(t, "are you sure, all existing files restored will be deleted ?[y/N]", outputs[1])
-	assert.Equal(t, "", outputs[2])
+	assert.Equal(t, "destination directory already exists, do you want to keep existing files ?[Y/n]are you sure, all existing files restored will be deleted ?[y/N]", string(buffer.Bytes()))
 }
 
 func TestCheckDestination_answer_yes_when_dest_already_exist(t *testing.T) {
@@ -86,9 +77,6 @@ func TestCheckDestination_answer_yes_when_dest_already_exist(t *testing.T) {
 		assert.Fail(t, "../../testtmp/dest/data directory should exist")
 	}
 
-	outputs := strings.Split(string(buffer.Bytes()), "\n")
-	assert.Equal(t, len(outputs), 2)
-	assert.Equal(t, "destination directory already exists, do you want to keep existing files ?[Y/n]", outputs[0])
-	assert.Equal(t, "", outputs[1])
+	assert.Equal(t, "destination directory already exists, do you want to keep existing files ?[Y/n]", string(buffer.Bytes()))
 }
 
