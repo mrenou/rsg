@@ -18,10 +18,11 @@ import (
 )
 
 type Options struct {
-	dest   string
-	region string
-	vault  string
-	debug  bool
+	dest    string
+	region  string
+	vault   string
+	debug   bool
+	filters []string
 }
 
 func main() {
@@ -97,19 +98,23 @@ func parseOptions() Options {
 	flag.StringVarP(&options.region, "region", "r", "", "region of the vault to restore")
 	flag.StringVarP(&options.vault, "vault", "v", "", "vault to restore")
 	flag.BoolVarP(&options.debug, "debug", "x", false, "display debug info")
+	flag.StringSliceVarP(&options.filters, "filter", "f", []string{}, "filter files to restore (globals * and ?")
 	flag.Parse()
 
-	if (flag.NArg() != 1) {
-		fmt.Fprintf(os.Stderr, "no destination given\n")
-		os.Exit(2)
-	}
-	options.dest = flag.Arg(0)
-
 	loggers.DebugFlag = options.debug
-	loggers.Printf(loggers.Debug, "options dest=%v \n", options.dest)
 	loggers.Printf(loggers.Debug, "options region=%v \n", options.region)
 	loggers.Printf(loggers.Debug, "options vault=%v \n", options.vault)
 	loggers.Printf(loggers.Debug, "options debug=%v \n", options.debug)
+	loggers.Printf(loggers.Debug, "options filters=%v \n", options.filters)
+
+	if (flag.NArg() != 1) {
+		fmt.Fprintf(os.Stderr, "no destination given\n")
+		flag.Usage()
+		os.Exit(2)
+	}
+	options.dest = flag.Arg(0)
+	loggers.Printf(loggers.Debug, "options dest=%v \n", options.dest)
+
 	return options
 }
 

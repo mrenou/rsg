@@ -13,6 +13,7 @@ import (
 	"io/ioutil"
 	"strings"
 	"../utils"
+	"os"
 )
 
 func mockStartPartialRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, vault, archiveId, bytesRange, jobIdToReturn string) *mock.Call {
@@ -37,6 +38,13 @@ func mockStartPartialRetrieveJob(glacierMock *GlacierMock, restorationContext *a
 	return glacierMock.On("InitiateJob", params).Return(out, nil)
 }
 
+func mockStartPartialRetrieveJobForAny(glacierMock *GlacierMock, jobIdToReturn string) *mock.Call {
+	out := &glacier.InitiateJobOutput{
+		JobId: aws.String(jobIdToReturn),
+	}
+	return glacierMock.On("InitiateJob", mock.AnythingOfType("*glacier.InitiateJobInput")).Return(out, nil)
+}
+
 func mockPartialOutputJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, jobId, vault, bytesRange string, content []byte) *mock.Call {
 	params := &glacier.GetJobOutputInput{
 		AccountId: aws.String(restorationContext.AccountId),
@@ -50,6 +58,22 @@ func mockPartialOutputJob(glacierMock *GlacierMock, restorationContext *awsutils
 	}
 
 	return glacierMock.On("GetJobOutput", params).Return(out, nil)
+}
+
+func mockPartialOutputJobForAny(glacierMock *GlacierMock, content []byte) *mock.Call {
+	out := &glacier.GetJobOutputOutput{
+		Body:  newReaderClosable(bytes.NewReader(content)),
+	}
+
+	return glacierMock.On("GetJobOutput", mock.AnythingOfType("*glacier.GetJobOutputInput")).Return(out, nil)
+}
+
+func mockDescribeJobForAny(glacierMock *GlacierMock, completed bool) *mock.Call {
+	out := &glacier.JobDescription{
+		Completed: aws.Bool(completed),
+	}
+
+	return glacierMock.On("DescribeJob", mock.AnythingOfType("*glacier.DescribeJobInput")).Return(out, nil)
 }
 
 func TestDownloadArchives_retrieve_and_download_file_in_one_part(t *testing.T) {
@@ -180,7 +204,7 @@ func TestDownloadArchives_retrieve_and_download_2_files_with_multipart(t *testin
 	mockDescribeJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, true).Once()
 	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "0-1119", []byte(strings.Repeat("_", 1120)))
 
-	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "1120-1048575",  append([]byte(strings.Repeat("_", 1047451)), []byte("olleh")...))
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "1120-1048575", append([]byte(strings.Repeat("_", 1047451)), []byte("olleh")...))
 
 	// When
 	downloadContext.downloadArchives()
@@ -239,7 +263,7 @@ func TestDownloadArchives_retrieve_and_download_3_files_with_2_identical(t *test
 	mockDescribeJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, true).Once()
 	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "0-1119", []byte(strings.Repeat("_", 1120)))
 
-	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "1120-1048575",  append([]byte(strings.Repeat("_", 1047451)), []byte("olleh")...))
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId5", restorationContext.Vault, "1120-1048575", append([]byte(strings.Repeat("_", 1047451)), []byte("olleh")...))
 
 	// When
 	downloadContext.downloadArchives()
@@ -250,8 +274,70 @@ func TestDownloadArchives_retrieve_and_download_3_files_with_2_identical(t *test
 	assertFileContent(t, "../../testtmp/dest/data/file3.txt", strings.Repeat("_", 4194299) + "hello")
 }
 
+func TestDownloadArchives_retrieve_and_download_only_filtered_files(t *testing.T) {
+	// Given
+	InitTest()
+	glacierMock := new(GlacierMock)
+	restorationContext := DefaultRestorationContext(glacierMock)
+	restorationContext.Filters = []string{"data/folder/*", "*.info", "data/file??.bin", "data/iwantthis" }
+	downloadContext := DownloadContext{
+		restorationContext: restorationContext,
+		bytesBySecond: 3496, // 1048800 on 5 min
+		maxArchivesRetrievingSize: utils.S_1MB * 2,
+		downloadSpeedAutoUpdate: false,
+		archivesRetrievingSize: 0,
+		archivePartRetrieveListMaxSize: 10,
+		archivePartRetrieveList: nil,
+		hasArchiveRows: false,
+		db: nil,
+		archiveRows:nil,
+	}
+
+	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
+	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'archiveId1', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file2.bin', 'archiveId2', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folderno/no.bin', 'archiveId3', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/no', 'archiveId4', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/otherfolder/no', 'archiveId5', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/otherfolder/file3.info', 'archiveId6', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/otherfolder/no.txt', 'archiveId7', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file4.info', 'archiveId8', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file41.bin', 'archiveId9', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file42.bin', 'archiveId10', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/filenop.bin', 'archiveId11', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/iwantthis', 'archiveId12', 2);")
+	db.Close()
+
+	mockStartPartialRetrieveJobForAny(glacierMock, "jobId")
+	mockDescribeJobForAny(glacierMock, true)
+	mockPartialOutputJobForAny(glacierMock, []byte("ok"))
+
+	// When
+	downloadContext.downloadArchives()
+
+	// Then
+	assertFileContent(t, "../../testtmp/dest/data/folder/file1.txt", "ok")
+	assertFileContent(t, "../../testtmp/dest/data/folder/file2.bin", "ok")
+	assertFileDoestntExist(t, "../../testtmp/dest/data/folder/no.bin")
+	assertFileDoestntExist(t, "../../testtmp/dest/data/no")
+	assertFileDoestntExist(t, "../../testtmp/dest/data/otherfolder/no")
+	assertFileContent(t, "../../testtmp/dest/data/otherfolder/file3.info", "ok")
+	assertFileDoestntExist(t, "../../testtmp/dest/data/otherfolder/no.txt")
+	assertFileContent(t, "../../testtmp/dest/data/file4.info", "ok")
+	assertFileContent(t, "../../testtmp/dest/data/file41.bin", "ok")
+	assertFileContent(t, "../../testtmp/dest/data/file42.bin", "ok")
+	assertFileDoestntExist(t, "../../testtmp/dest/data/filenop.bin")
+	assertFileContent(t, "../../testtmp/dest/data/iwantthis", "ok")
+}
 
 func assertFileContent(t *testing.T, filePath, expected string) {
 	data, _ := ioutil.ReadFile(filePath)
 	assert.Equal(t, expected, string(data))
+}
+
+func assertFileDoestntExist(t *testing.T, filePath string) {
+	if _, err := os.Stat(filePath); !os.IsNotExist(err) {
+		assert.Fail(t, "path should not exist")
+	}
 }

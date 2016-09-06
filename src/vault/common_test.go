@@ -9,6 +9,8 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/stretchr/testify/mock"
 	"github.com/aws/aws-sdk-go/service/glacier"
+	"io/ioutil"
+	"io"
 )
 
 func InitTest() *bytes.Buffer {
@@ -23,7 +25,7 @@ func InitTest() *bytes.Buffer {
 }
 
 func DefaultRestorationContext(glacierMock *GlacierMock) *awsutils.RestorationContext {
-	return &awsutils.RestorationContext{glacierMock, "../../testtmp/cache", "region", "vault", "vault_mapping", "acountId", awsutils.RegionVaultCache{}, "../../testtmp/dest"}
+	return &awsutils.RestorationContext{glacierMock, "../../testtmp/cache", "region", "vault", "vault_mapping", "acountId", awsutils.RegionVaultCache{}, "../../testtmp/dest", []string{}}
 }
 
 type SessionMock struct {
@@ -56,6 +58,22 @@ func (m *GlacierMock) DescribeJob(input *glacier.DescribeJobInput) (*glacier.Job
 
 func (m *GlacierMock) GetJobOutput(input *glacier.GetJobOutputInput) (*glacier.GetJobOutputOutput, error) {
 	args := m.Called(input)
-	return args.Get(0).(*glacier.GetJobOutputOutput), args.Error(1)
+	getJobOutputOutput := args.Get(0).(*glacier.GetJobOutputOutput)
+	content, _ := ioutil.ReadAll(getJobOutputOutput.Body)
+	getJobOutputOutput.Body = newReaderClosable(bytes.NewReader(content))
+	getJobOutputOutputCopy := &glacier.GetJobOutputOutput{
+		AcceptRanges: getJobOutputOutput.AcceptRanges,
+		ArchiveDescription: getJobOutputOutput.ArchiveDescription,
+		Body: newReaderClosable(bytes.NewReader(content)),
+		Checksum: getJobOutputOutput.Checksum,
+		ContentRange: getJobOutputOutput.ContentRange,
+		ContentType: getJobOutputOutput.ContentType,
+		Status: getJobOutputOutput.Status}
+	return getJobOutputOutputCopy, args.Error(1)
 }
+
+func newReaderClosable(reader io.Reader) ReaderClosable {
+	return ReaderClosable{reader}
+}
+
 

@@ -12,6 +12,7 @@ import (
 	"errors"
 	"time"
 	"code.cloudfoundry.org/bytefmt"
+	"strings"
 )
 
 type archiveRetrieve struct {
@@ -227,7 +228,9 @@ func (downloadContext *DownloadContext) updateDownloadSpeed(downloadedSize uint6
 }
 
 func (downloadContext *DownloadContext) handleArchivePartDownloadCompletion(restorationContext *awsutils.RestorationContext) {
+	loggers.Printf(loggers.Debug, "pouet %v %v\n", downloadContext.nextByteIndexToDownload, downloadContext.uncompletedDownload.retrievedSize)
 	if (downloadContext.nextByteIndexToDownload >= downloadContext.uncompletedDownload.retrievedSize) {
+		loggers.Printf(loggers.Debug, "bim %v %v\n", downloadContext.nextByteIndexToDownload, downloadContext.uncompletedDownload.retrievedSize)
 		downloadContext.handleArchiveFileDownloadCompletion(restorationContext)
 		downloadContext.uncompletedDownload = nil
 		downloadContext.nextByteIndexToDownload = 0
@@ -239,6 +242,7 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(rest
 	utils.ExitIfError(err)
 	stat, err := file.Stat()
 	utils.ExitIfError(err)
+	loggers.Printf(loggers.Debug, "bam %v %v\n", stat.Size(), downloadContext.uncompletedDownload.size)
 	if uint64(stat.Size()) >= downloadContext.uncompletedDownload.size {
 		loggers.Printf(loggers.Debug, "archive %v downloaded\n", downloadContext.uncompletedDownload.archiveId)
 
@@ -292,7 +296,21 @@ func (downloadContext *DownloadContext) loadDb() *sql.DB {
 }
 
 func (downloadContext *DownloadContext) loadArchives() *sql.Rows {
-	rows, err := downloadContext.db.Query("SELECT archiveId, fileSize FROM file_info_tb ORDER BY key")
+	where := ""
+	if len(downloadContext.restorationContext.Filters) > 0 {
+		where = "WHERE "
+		for i, filter := range downloadContext.restorationContext.Filters {
+			filter = strings.Replace(filter, "*", "%", -1)
+			filter = strings.Replace(filter, "?", "_", -1)
+			if i > 0 {
+				where += " OR "
+			}
+			where += "basepath LIKE '" + filter + "'"
+		}
+	}
+	sqlQuery := "SELECT archiveId, fileSize FROM file_info_tb "  + where + " ORDER BY key"
+	loggers.Printf(loggers.Debug, "Query mapping file for archives with %v\n", sqlQuery)
+	rows, err := downloadContext.db.Query(sqlQuery)
 	utils.ExitIfError(err)
 	downloadContext.archiveRows = rows
 	return rows

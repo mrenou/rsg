@@ -27,6 +27,7 @@ type RestorationContext struct {
 	AccountId          string
 	RegionVaultCache   RegionVaultCache
 	DestinationDirPath string
+	Filters            []string
 }
 
 type RegionVaultCache struct {
@@ -43,7 +44,7 @@ func CreateRestorationContext(sessionValue *session.Session, accountId, region, 
 	utils.ExitIfError(err)
 	glacierClient := glacier.New(sessionValue, &aws.Config{Region: aws.String(region)})
 	cache := ReadRegionVaultCache(region, vault, workingDirPath);
-	return &RestorationContext{glacierClient, workingDirPath, region, vault, vault + "_mapping", accountId, cache, destinationDirPath}
+	return &RestorationContext{glacierClient, workingDirPath, region, vault, vault + "_mapping", accountId, cache, destinationDirPath, []string{}}
 }
 
 func ReadRegionVaultCache(region, vault, workingDirPath string) RegionVaultCache {

@@ -339,10 +339,6 @@ type ReaderClosable struct {
 	reader io.Reader
 }
 
-func newReaderClosable(reader io.Reader) ReaderClosable {
-	return ReaderClosable{reader}
-}
-
 func (readerClosable ReaderClosable) Close() error {
 	return nil
 }

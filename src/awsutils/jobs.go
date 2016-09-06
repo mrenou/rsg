@@ -71,7 +71,8 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 	}
 	utils.ExitIfError(err)
 	loggers.Printf(loggers.Debug, "copy file into: %v\n", destPath)
-	_, err = io.Copy(file, resp.Body)
+	written, err := io.Copy(file, resp.Body)
+	loggers.Printf(loggers.Debug, "%v bytes copied\n", written)
 	utils.ExitIfError(err)
 }
 
