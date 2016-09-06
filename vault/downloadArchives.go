@@ -97,9 +97,6 @@ func (downloadContext *DownloadContext) downloadArchives() {
 		utils.ExitIfError(errors.New("max archives retrieving size cannot be less than 1MB"))
 	}
 
-	err := os.MkdirAll(filepath.Dir(downloadContext.restorationContext.DestinationDirPath + "/"), 0700)
-	utils.ExitIfError(err)
-
 	db := downloadContext.loadDb()
 	defer db.Close()
 

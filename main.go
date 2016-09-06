@@ -2,7 +2,6 @@ package main
 
 import (
 	"rsg/vault"
-	"rsg/inputs"
 	"github.com/aws/aws-sdk-go/aws/session"
 	flag "github.com/spf13/pflag"
 	"strings"
@@ -10,8 +9,6 @@ import (
 	"rsg/loggers"
 	"rsg/awsutils"
 	"rsg/utils"
-	"github.com/aws/aws-sdk-go/aws"
-	"github.com/aws/aws-sdk-go/service/glacier"
 	"fmt"
 	"os"
 	_ "github.com/mattn/go-sqlite3"
@@ -32,60 +29,11 @@ func main() {
 	utils.ExitIfError(err)
 	options := parseOptions()
 	region, vaultName := vault.SelectRegionVault(accountId, sessionValue, options.region, options.vault)
-	loggers.Printf(loggers.Debug, "region and vault used for restauration : %s:%s\n", region, vaultName)
-
 	restorationContext := awsutils.CreateRestorationContext(sessionValue, accountId, region, vaultName, options.dest)
-
-	//listJobs(restorationContext.GlacierClient, accountId, restorationContext.MappingVault)
-
 	vault.DownloadMappingArchive(restorationContext)
-	if _, err := os.Stat(options.dest); os.IsExist(err) {
-		if !inputs.QueryYesOrNo("destination directory already exists, do you want to keep existing files ?", true) {
-			if !inputs.QueryYesOrNo("are you sure, all existing files restored will be deleted ?", false) {
-				os.RemoveAll(options.dest)
-			}
-		}
-	}
 	err = vault.CheckDestinationDirectory(restorationContext)
 	utils.ExitIfError(err)
-
 	vault.DownloadArchives(restorationContext)
-}
-
-func listJobs(glacierClient *glacier.Glacier, accountId, vault string) {
-	params := &glacier.ListJobsInput{
-		AccountId:  aws.String(accountId), // Required
-		VaultName:  aws.String(vault), // Required
-	}
-	resp, err := glacierClient.ListJobs(params)
-
-	if err != nil {
-		// Print the error, cast err to awserr.Error to get the Code and
-		// Message from an error.
-		fmt.Println(err.Error())
-		return
-	}
-
-	// Pretty-print the response data.
-	fmt.Println(resp)
-}
-
-func getOutputJob(glacierClient *glacier.Glacier, accountId, vault, jobId string) (*[]byte, error) {
-	params := &glacier.GetJobOutputInput{
-		AccountId: aws.String(accountId),
-		JobId:     aws.String(jobId),
-		VaultName: aws.String(vault),
-		Range:     nil,
-	}
-	resp, err := glacierClient.GetJobOutput(params)
-	if err != nil {
-		return nil, err
-	}
-
-	fmt.Println(resp)
-	//body, _ := ioutil.ReadAll(resp.Body)
-	//fmt.Println(string(body))
-	return nil, nil
 }
 
 func parseOptions() Options {
@@ -101,20 +49,15 @@ func parseOptions() Options {
 	flag.StringSliceVarP(&options.filters, "filter", "f", []string{}, "filter files to restore (globals * and ?")
 	flag.Parse()
 
-	loggers.DebugFlag = options.debug
-	loggers.Printf(loggers.Debug, "options region=%v \n", options.region)
-	loggers.Printf(loggers.Debug, "options vault=%v \n", options.vault)
-	loggers.Printf(loggers.Debug, "options debug=%v \n", options.debug)
-	loggers.Printf(loggers.Debug, "options filters=%v \n", options.filters)
-
 	if (flag.NArg() != 1) {
 		fmt.Fprintf(os.Stderr, "no destination given\n")
 		flag.Usage()
 		os.Exit(2)
 	}
 	options.dest = flag.Arg(0)
-	loggers.Printf(loggers.Debug, "options dest=%v \n", options.dest)
 
+	loggers.DebugFlag = options.debug
+	loggers.Printf(loggers.Debug, "options parsed: %+v \n", options)
 	return options
 }
 

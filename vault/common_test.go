@@ -13,7 +13,7 @@ import (
 	"io"
 )
 
-func InitTest() *bytes.Buffer {
+func CommonInitTest() *bytes.Buffer {
 	loggers.DebugFlag = true
 	loggers.InitDefaultLog()
 	buffer := new(bytes.Buffer)

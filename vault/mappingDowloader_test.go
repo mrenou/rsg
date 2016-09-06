@@ -93,7 +93,7 @@ func mockStartRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils
 
 func TestDownloadMappingArchive_download_mapping_first_time(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 
@@ -120,7 +120,7 @@ func TestDownloadMappingArchive_download_mapping_first_time(t *testing.T) {
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_job_in_progress(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"inventoryMappingJobId", nil, ""}
@@ -148,7 +148,7 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_in_progress(
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_job_deprecated(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"unknownInventoryMappingJobId", nil, ""}
@@ -178,7 +178,7 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_deprecated(t
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_done(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"inventoryMappingJobId", nil, ""}
@@ -203,7 +203,7 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_done(t *testing.
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_job_in_progress(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
@@ -226,7 +226,7 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_job_in_progress(t
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_job_deprecated(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "unknownRetrieveMappingJobId"}
@@ -251,7 +251,7 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_job_deprecated(t 
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_done(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
@@ -271,7 +271,7 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_done(t *testing.T
 
 func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
@@ -295,7 +295,7 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists(t *
 
 func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but_restart_download(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 

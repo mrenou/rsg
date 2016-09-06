@@ -11,7 +11,7 @@ import (
 
 func TestCheckDestination_dest_not_exist(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	restorationContext := DefaultRestorationContext(nil)
 
 	// When
@@ -28,7 +28,7 @@ func TestCheckDestination_dest_not_exist(t *testing.T) {
 
 func TestCheckDestination_answer_no_but_not_confirm_when_dest_already_exist(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	restorationContext := DefaultRestorationContext(nil)
 	os.MkdirAll("../../testtmp/dest/data", 0700)
 	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("n\n\n")))
@@ -46,7 +46,7 @@ func TestCheckDestination_answer_no_but_not_confirm_when_dest_already_exist(t *t
 
 func TestCheckDestination_answer_no_and_confirm_when_dest_already_exist(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	restorationContext := DefaultRestorationContext(nil)
 	os.MkdirAll("../../testtmp/dest/data", 0700)
 	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("n\ny\n")))
@@ -64,7 +64,7 @@ func TestCheckDestination_answer_no_and_confirm_when_dest_already_exist(t *testi
 
 func TestCheckDestination_answer_yes_when_dest_already_exist(t *testing.T) {
 	// Given
-	buffer := InitTest()
+	buffer := CommonInitTest()
 	restorationContext := DefaultRestorationContext(nil)
 	os.MkdirAll("../../testtmp/dest/data", 0700)
 	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("\n")))
