@@ -3,9 +3,9 @@ package vault
 import (
 	"strings"
 	"github.com/aws/aws-sdk-go/aws/session"
-	"../loggers"
-	"../utils"
-	"../inputs"
+	"rsg/loggers"
+	"rsg/utils"
+	"rsg/inputs"
 )
 
 func SelectRegionVault(accountId string, sessionValue *session.Session, givenRegion, givenVault string) (string, string) {

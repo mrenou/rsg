@@ -1,15 +1,15 @@
 package main
 
 import (
-	"./vault"
-	"./inputs"
+	"rsg/vault"
+	"rsg/inputs"
 	"github.com/aws/aws-sdk-go/aws/session"
 	flag "github.com/spf13/pflag"
 	"strings"
 	"github.com/aws/aws-sdk-go/service/iam"
-	"./loggers"
-	"./awsutils"
-	"./utils"
+	"rsg/loggers"
+	"rsg/awsutils"
+	"rsg/utils"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"fmt"

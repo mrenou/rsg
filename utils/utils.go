@@ -2,7 +2,7 @@ package utils
 
 import "os"
 import (
-	"../loggers"
+	"rsg/loggers"
 	"io"
 )
 

@@ -3,8 +3,8 @@ package vault
 import (
 	"testing"
 	"github.com/stretchr/testify/assert"
-	"../loggers"
-	"../inputs"
+	"rsg/loggers"
+	"rsg/inputs"
 	"bytes"
 	"os"
 	"bufio"

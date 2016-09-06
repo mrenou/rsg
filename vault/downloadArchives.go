@@ -3,9 +3,9 @@ package vault
 import (
 	"database/sql"
 	"os"
-	"../utils"
-	"../awsutils"
-	"../loggers"
+	"rsg/utils"
+	"rsg/awsutils"
+	"rsg/loggers"
 	"container/list"
 	_ "github.com/mattn/go-sqlite3"
 	"path/filepath"

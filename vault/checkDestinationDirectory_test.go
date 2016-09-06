@@ -2,7 +2,7 @@ package vault
 
 import (
 	"testing"
-	"../inputs"
+	"rsg/inputs"
 	"os"
 	"github.com/stretchr/testify/assert"
 	"bufio"

@@ -2,8 +2,8 @@ package inputs
 
 import (
 	"strings"
-	"../loggers"
-	"../utils"
+	"rsg/loggers"
+	"rsg/utils"
 )
 
 func QueryYesOrNo(query string, defaultAnswer bool) bool {

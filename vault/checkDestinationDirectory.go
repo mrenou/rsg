@@ -4,8 +4,8 @@ import (
 	"os"
 	"errors"
 	"fmt"
-	"../inputs"
-	"../awsutils"
+	"rsg/inputs"
+	"rsg/awsutils"
 )
 
 func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) error {

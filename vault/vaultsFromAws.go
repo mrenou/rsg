@@ -8,8 +8,8 @@ import (
 	"strings"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"errors"
-	"../loggers"
-	"../utils"
+	"rsg/loggers"
+	"rsg/utils"
 )
 
 var Regions = []string{"us-east-1", "us-west-1", "us-west-2", "eu-west-1", "eu-central-1", "ap-northeast-1", "ap-northeast-2", "ap-southeast-2"}

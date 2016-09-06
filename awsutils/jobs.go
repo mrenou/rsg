@@ -3,8 +3,8 @@ package awsutils
 import (
 	"time"
 	"github.com/aws/aws-sdk-go/aws"
-	"../loggers"
-	"../utils"
+	"rsg/loggers"
+	"rsg/utils"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"strconv"
 	"errors"

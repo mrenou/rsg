@@ -2,8 +2,8 @@ package awsutils
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"../loggers"
-	"../utils"
+	"rsg/loggers"
+	"rsg/utils"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"os/user"

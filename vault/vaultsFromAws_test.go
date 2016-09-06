@@ -5,7 +5,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
-	"../loggers"
+	"rsg/loggers"
 )
 
 func TestGetSynologyVaults_should_return_one_vault(t *testing.T) {

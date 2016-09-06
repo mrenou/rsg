@@ -1,10 +1,10 @@
 package vault
 
 import (
-	"../loggers"
-	"../utils"
-	"../inputs"
-	"../awsutils"
+	"rsg/loggers"
+	"rsg/utils"
+	"rsg/inputs"
+	"rsg/awsutils"
 	"strings"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"github.com/aws/aws-sdk-go/aws"

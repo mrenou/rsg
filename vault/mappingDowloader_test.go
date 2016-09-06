@@ -1,8 +1,8 @@
 package vault
 
 import (
-	"../awsutils"
-	"../inputs"
+	"rsg/awsutils"
+	"rsg/inputs"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"github.com/aws/aws-sdk-go/aws"
 	"testing"

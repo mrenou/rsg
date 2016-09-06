@@ -2,7 +2,7 @@ package vault
 
 import (
 	"testing"
-	"../awsutils"
+	"rsg/awsutils"
 	"database/sql"
 	_ "github.com/mattn/go-sqlite3"
 	"github.com/aws/aws-sdk-go/aws"
@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"strings"
-	"../utils"
+	"rsg/utils"
 	"os"
 )
 
