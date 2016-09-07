@@ -48,8 +48,23 @@ func parseOptions() Options {
 	flag.StringVarP(&options.dest, "destination", "d", "", "path to restoration directory")
 	flag.Parse()
 
+	awsIdTruncated := ""
+	awsSecretTruncated := ""
+	if len(options.awsId) > 3 {
+		awsIdTruncated = options.awsId[0:3] + "..."
+	}
+	if len(options.awsSecret) > 3 {
+		awsSecretTruncated = options.awsSecret[0:3] + "..."
+	}
+
 	loggers.DebugFlag = options.debug
-	loggers.Printf(loggers.Debug, "options parsed: %+v \n", options)
+	loggers.Printf(loggers.Debug, "options aws-id: %v\n",  awsIdTruncated)
+	loggers.Printf(loggers.Debug, "options aws-secret: %v\n", awsSecretTruncated)
+	loggers.Printf(loggers.Debug, "options debug: %v\n", options.debug)
+	loggers.Printf(loggers.Debug, "options destination: %v \n", options.dest)
+	loggers.Printf(loggers.Debug, "options filters: %v \n", options.filters)
+	loggers.Printf(loggers.Debug, "options region: %v \n", options.region)
+	loggers.Printf(loggers.Debug, "options vault: %v \n", options.vault)
 	return options
 }
 
