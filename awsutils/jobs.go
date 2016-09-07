@@ -77,25 +77,23 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 	return uint64(written)
 }
 
-func StartRetrieveArchiveJob(restorationContext *RestorationContext, vault string, archive Archive) string {
-	jobId, _ := StartRetrievePartialArchiveJob(restorationContext, vault, archive, 0, archive.Size)
-	return jobId
+func StartRetrieveArchiveJob(restorationContext *RestorationContext, vault string, archive Archive) (string, uint64, error) {
+	return StartRetrievePartialArchiveJob(restorationContext, vault, archive, 0, archive.Size)
 }
 
-func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vault string, archive Archive, fromByte uint64, sizeToRetrieve uint64) (string, uint64) {
+func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vault string, archive Archive, fromByte uint64, sizeToRetrieve uint64) (string, uint64, error) {
 	rangeToRetrieve := ""
 	if (fromByte) % utils.S_1MB != 0 {
-		utils.ExitIfError(errors.New("byte start index must be divisible by 1MB"))
+		return "", 0, errors.New("byte start index must be divisible by 1MB")
 	}
 	if (fromByte + sizeToRetrieve >= archive.Size) {
 		sizeToRetrieve = archive.Size - fromByte
 	} else if sizeToRetrieve >= utils.S_1MB {
 		sizeToRetrieve = sizeToRetrieve - (sizeToRetrieve % utils.S_1MB)
 	} else {
-		utils.ExitIfError(errors.New("size to retrieve must be divisible by MB"))
+		return "", 0, errors.New("size to retrieve must be divisible by MB")
 	}
 	rangeToRetrieve = strconv.FormatUint(fromByte, 10) + "-" + strconv.FormatUint(fromByte + sizeToRetrieve - 1, 10)
-
 	params := &glacier.InitiateJobInput{
 		AccountId: aws.String(restorationContext.AccountId),
 		VaultName: aws.String(vault),
@@ -108,8 +106,10 @@ func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vaul
 	}
 	loggers.Printf(loggers.Debug, "start retrieve archive job with params: %v\n", params)
 	resp, err := restorationContext.GlacierClient.InitiateJob(params)
-	utils.ExitIfError(err)
-	return *resp.JobId, sizeToRetrieve
+	if err != nil {
+		return "", 0, err
+	}
+	return *resp.JobId, sizeToRetrieve, nil
 }
 
 func GetDataRetrievalStrategy(restorationContext *RestorationContext) string {

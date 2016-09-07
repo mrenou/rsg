@@ -45,7 +45,10 @@ func (m *GlacierMock) ListVaults(input *glacier.ListVaultsInput) (*glacier.ListV
 
 func (m *GlacierMock) InitiateJob(input *glacier.InitiateJobInput) (*glacier.InitiateJobOutput, error) {
 	args := m.Called(input)
-	return args.Get(0).(*glacier.InitiateJobOutput), args.Error(1)
+	if args.Get(0) != nil {
+		return args.Get(0).(*glacier.InitiateJobOutput), args.Error(1)
+	}
+	return nil, args.Error(1)
 }
 
 func (m *GlacierMock) DescribeJob(input *glacier.DescribeJobInput) (*glacier.JobDescription, error) {

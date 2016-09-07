@@ -4,6 +4,7 @@ import "os"
 import (
 	"rsg/loggers"
 	"io"
+	"time"
 )
 
 const S_1MB = 1024 * 1024
@@ -43,4 +44,15 @@ func CopyFile(dst, src string) error {
 	}
 	return d.Close()
 }
+
+func WaitNextHour() {
+	actualHour := time.Now().Hour()
+	for {
+		time.Sleep(time.Duration(60 - time.Now().Minute()) * time.Minute)
+		if time.Now().Hour() != actualHour {
+			break
+		}
+	}
+}
+
 

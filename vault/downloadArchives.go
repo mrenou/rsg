@@ -182,20 +182,37 @@ func (downloadContext *DownloadContext) computeSizeToRetrieve(archiveToRetrieve 
 }
 
 func (downloadContext *DownloadContext) startArchivePartRetrieveJob(archiveToRetrieve *archiveRetrieve, sizeToRetrieve uint64) {
-	jobId, sizeRetrieved := awsutils.StartRetrievePartialArchiveJob(downloadContext.restorationContext,
-		downloadContext.restorationContext.Vault,
-		awsutils.Archive{archiveToRetrieve.archiveId, archiveToRetrieve.size},
-		archiveToRetrieve.nextByteIndexToRetrieve,
-		sizeToRetrieve)
+	jobId, sizeRetrieved := downloadContext.retryArchivePartRetrieveJob(archiveToRetrieve, sizeToRetrieve)
 	loggers.Printf(loggers.Debug, "job has started for archive id %s to retrieve %v bytes from %v byte index\n", archiveToRetrieve.archiveId, sizeRetrieved, archiveToRetrieve.nextByteIndexToRetrieve)
-
 	archiveToRetrieve.nextByteIndexToRetrieve += sizeRetrieved
-
 	archivePartRetrieve := &archivePartRetrieve{jobId, archiveToRetrieve.archiveId, sizeRetrieved, archiveToRetrieve.size}
 	downloadContext.archivesRetrievingSize += sizeRetrieved
 	downloadContext.archivePartRetrieveList.PushFront(archivePartRetrieve)
-
 	downloadContext.handleArchiveRetrieveCompletion(archiveToRetrieve)
+}
+
+func (downloadContext *DownloadContext) retryArchivePartRetrieveJob(archiveToRetrieve *archiveRetrieve, sizeToRetrieve uint64) (string, uint64) {
+	var jobId string
+	var sizeRetrieved uint64
+	var err error
+	for {
+		jobId, sizeRetrieved, err = awsutils.StartRetrievePartialArchiveJob(downloadContext.restorationContext,
+			downloadContext.restorationContext.Vault,
+			awsutils.Archive{archiveToRetrieve.archiveId, archiveToRetrieve.size},
+			archiveToRetrieve.nextByteIndexToRetrieve,
+			sizeToRetrieve)
+		if err != nil {
+			if strings.Contains(err.Error(), "PolicyEnforcedException") {
+				downloadContext.displayStatus("rate limit reached, waiting")
+				utils.WaitNextHour()
+			} else {
+				utils.ExitIfError(err)
+			}
+		} else {
+			return jobId, sizeRetrieved
+		}
+	}
+
 }
 
 func (downloadContext *DownloadContext) handleArchiveRetrieveCompletion(archiveToRetrieve *archiveRetrieve) {
