@@ -27,9 +27,13 @@ func main() {
 	sessionValue := session.New()
 	accountId, err := getAccountId(sessionValue)
 	utils.ExitIfError(err)
+
 	options := parseOptions()
 	region, vaultName := vault.SelectRegionVault(accountId, sessionValue, options.region, options.vault)
 	restorationContext := awsutils.CreateRestorationContext(sessionValue, accountId, region, vaultName, options.dest)
+
+	displayWarnIfNotFreeTier(restorationContext)
+
 	vault.DownloadMappingArchive(restorationContext)
 	err = vault.CheckDestinationDirectory(restorationContext)
 	utils.ExitIfError(err)
@@ -69,6 +73,17 @@ func getAccountId(sessionValue *session.Session) (string, error) {
 		return "", err
 	}
 	return strings.Split(*resp.User.Arn, ":")[4], nil;
+}
+
+func displayWarnIfNotFreeTier(restorationContext *awsutils.RestorationContext) {
+	strategy := awsutils.GetDataRetrievalStrategy(restorationContext)
+	if strategy != "FreeTier" {
+		loggers.Printf(loggers.Warning, "##################################################################################################################\n")
+		loggers.Printf(loggers.Warning, "Your data retrieval strategy is \"%v\", the next operations could generate additional costs !!!\n", strategy)
+		loggers.Printf(loggers.Warning, "Select strategy \"FreeTier\" to avoid these costs :\n")
+		loggers.Printf(loggers.Warning, "http://docs.aws.amazon.com/amazonglacier/latest/dev/data-retrieval-policy.html#data-retrieval-policy-using-console\n")
+		loggers.Printf(loggers.Warning, "##################################################################################################################\n")
+	}
 }
 
 

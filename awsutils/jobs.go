@@ -111,3 +111,12 @@ func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vaul
 	utils.ExitIfError(err)
 	return *resp.JobId, sizeToRetrieve
 }
+
+func GetDataRetrievalStrategy(restorationContext *RestorationContext) string {
+	input := &glacier.GetDataRetrievalPolicyInput{
+		AccountId:  &restorationContext.AccountId,
+	}
+	output, err := restorationContext.GlacierClient.GetDataRetrievalPolicy(input)
+	utils.ExitIfError(err)
+	return *output.Policy.Rules[0].Strategy
+}
