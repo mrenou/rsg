@@ -24,6 +24,7 @@ type Options struct {
 
 func main() {
 	loggers.InitDefaultLog()
+	displayInfoAboutCosts()
 	sessionValue := session.New()
 	accountId, err := getAccountId(sessionValue)
 	utils.ExitIfError(err)
@@ -73,6 +74,14 @@ func getAccountId(sessionValue *session.Session) (string, error) {
 		return "", err
 	}
 	return strings.Split(*resp.User.Arn, ":")[4], nil;
+}
+
+func displayInfoAboutCosts() {
+		loggers.Printf(loggers.Info, "###################################################################################\n")
+		loggers.Printf(loggers.Info, "The use of Amazone Web Service Glacier could generate additional costs.\n")
+		loggers.Printf(loggers.Info, "The author(s) of this program cannot be held responsible for these additional costs\n")
+		loggers.Printf(loggers.Info, "More information about pricing : https://aws.amazon.com/glacier/pricing/\n")
+		loggers.Printf(loggers.Info, "####################################################################################\n")
 }
 
 func displayWarnIfNotFreeTier(restorationContext *awsutils.RestorationContext) {
