@@ -6,22 +6,26 @@ import (
 	"fmt"
 	"rsg/inputs"
 	"rsg/awsutils"
+	"rsg/loggers"
 )
 
 func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) error {
-	destinationDirectoryPath := restorationContext.DestinationDirPath
-	if stat, err := os.Stat(destinationDirectoryPath); !os.IsNotExist(err) {
+	if restorationContext.DestinationDirPath == "" {
+		restorationContext.DestinationDirPath = inputs.QueryString("what is the destination directory path ?")
+	}
+	if stat, err := os.Stat(restorationContext.DestinationDirPath); !os.IsNotExist(err) {
 		if !stat.IsDir() {
-			return errors.New(fmt.Sprintf("destination directory is a file: %s", destinationDirectoryPath))
+			return errors.New(fmt.Sprintf("destination directory is a file: %s", restorationContext.DestinationDirPath))
 		}
 		if !inputs.QueryYesOrNo("destination directory already exists, do you want to keep existing files ?", true) {
 			if inputs.QueryYesOrNo("are you sure, all existing files restored will be deleted ?", false) {
-				os.RemoveAll(destinationDirectoryPath)
+				os.RemoveAll(restorationContext.DestinationDirPath)
 			}
 		}
 	}
-	if err := os.MkdirAll(destinationDirectoryPath, 0700); err != nil {
-		return errors.New(fmt.Sprintf("cannot create destination directory: %s", destinationDirectoryPath))
+	if err := os.MkdirAll(restorationContext.DestinationDirPath, 0700); err != nil {
+		return errors.New(fmt.Sprintf("cannot create destination directory: %s", restorationContext.DestinationDirPath))
 	}
+	loggers.Printf(loggers.Info, "destination directory path is %v\n", restorationContext.DestinationDirPath)
 	return nil
 }

@@ -9,6 +9,26 @@ import (
 	"bytes"
 )
 
+func TestCheckDestination_dest_is_not_defined(t *testing.T) {
+	// Given
+	buffer := CommonInitTest()
+	restorationContext := DefaultRestorationContext(nil)
+	restorationContext.DestinationDirPath = ""
+	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("../../testtmp/dest\n")))
+
+	// When
+	CheckDestinationDirectory(restorationContext)
+
+	// Then
+	if stat, err := os.Stat("../../testtmp/dest"); !os.IsNotExist(err) {
+		assert.True(t, stat.IsDir(), "../../testtmp/dest directory should be a directory")
+	} else {
+		assert.Fail(t, "../../testtmp/dest directory should exist")
+	}
+
+	assert.Equal(t, "what is the destination directory path ?", string(buffer.Bytes()))
+}
+
 func TestCheckDestination_dest_not_exist(t *testing.T) {
 	// Given
 	buffer := CommonInitTest()

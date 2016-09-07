@@ -6,8 +6,6 @@ import (
 	"rsg/loggers"
 	"rsg/awsutils"
 	"rsg/utils"
-	"fmt"
-	"os"
 	_ "github.com/mattn/go-sqlite3"
 )
 
@@ -39,10 +37,7 @@ func main() {
 
 func parseOptions() Options {
 	options := Options{}
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage:\n%s [OPTIONS] DEST\n", os.Args[0])
-		flag.PrintDefaults()
-	}
+
 
 	flag.StringVarP(&options.region, "region", "r", "", "region of the vault to restore")
 	flag.StringVarP(&options.vault, "vault", "v", "", "vault to restore")
@@ -50,14 +45,8 @@ func parseOptions() Options {
 	flag.StringSliceVarP(&options.filters, "filter", "f", []string{}, "filter files to restore (globals * and ?")
 	flag.StringVar(&options.awsId, "aws-id", "", "id of aws credentials")
 	flag.StringVar(&options.awsSecret, "aws-secret", "", "secret of aws credentials")
+	flag.StringVarP(&options.dest, "destination", "d", "", "path to restoration directory")
 	flag.Parse()
-
-	if (flag.NArg() != 1) {
-		fmt.Fprintf(os.Stderr, "no destination given\n")
-		flag.Usage()
-		os.Exit(2)
-	}
-	options.dest = flag.Arg(0)
 
 	loggers.DebugFlag = options.debug
 	loggers.Printf(loggers.Debug, "options parsed: %+v \n", options)
