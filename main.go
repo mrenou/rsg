@@ -2,10 +2,7 @@ package main
 
 import (
 	"rsg/vault"
-	"github.com/aws/aws-sdk-go/aws/session"
 	flag "github.com/spf13/pflag"
-	"strings"
-	"github.com/aws/aws-sdk-go/service/iam"
 	"rsg/loggers"
 	"rsg/awsutils"
 	"rsg/utils"
@@ -15,26 +12,25 @@ import (
 )
 
 type Options struct {
-	dest    string
-	region  string
-	vault   string
-	debug   bool
-	filters []string
+	awsId     string
+	awsSecret string
+	debug     bool
+	dest      string
+	filters   []string
+	region    string
+	vault     string
 }
 
 func main() {
 	loggers.InitDefaultLog()
 	displayInfoAboutCosts()
-	sessionValue := session.New()
-	accountId, err := getAccountId(sessionValue)
-	utils.ExitIfError(err)
-
 	options := parseOptions()
-	region, vaultName := vault.SelectRegionVault(accountId, sessionValue, options.region, options.vault)
-	restorationContext := awsutils.CreateRestorationContext(sessionValue, accountId, region, vaultName, options.dest)
-
+	session := awsutils.BuildSession(options.awsId, options.awsSecret)
+	accountId, err := awsutils.GetAccountId(session)
+	utils.ExitIfError(err)
+	region, vaultName := vault.SelectRegionVault(accountId, session, options.region, options.vault)
+	restorationContext := awsutils.CreateRestorationContext(session, accountId, region, vaultName, options.dest)
 	displayWarnIfNotFreeTier(restorationContext)
-
 	vault.DownloadMappingArchive(restorationContext)
 	err = vault.CheckDestinationDirectory(restorationContext)
 	utils.ExitIfError(err)
@@ -52,6 +48,8 @@ func parseOptions() Options {
 	flag.StringVarP(&options.vault, "vault", "v", "", "vault to restore")
 	flag.BoolVarP(&options.debug, "debug", "x", false, "display debug info")
 	flag.StringSliceVarP(&options.filters, "filter", "f", []string{}, "filter files to restore (globals * and ?")
+	flag.StringVar(&options.awsId, "aws-id", "", "id of aws credentials")
+	flag.StringVar(&options.awsSecret, "aws-secret", "", "secret of aws credentials")
 	flag.Parse()
 
 	if (flag.NArg() != 1) {
@@ -66,22 +64,12 @@ func parseOptions() Options {
 	return options
 }
 
-func getAccountId(sessionValue *session.Session) (string, error) {
-	svc := iam.New(sessionValue)
-	params := &iam.GetUserInput{}
-	resp, err := svc.GetUser(params)
-	if err != nil {
-		return "", err
-	}
-	return strings.Split(*resp.User.Arn, ":")[4], nil;
-}
-
 func displayInfoAboutCosts() {
-		loggers.Printf(loggers.Info, "###################################################################################\n")
-		loggers.Printf(loggers.Info, "The use of Amazone Web Service Glacier could generate additional costs.\n")
-		loggers.Printf(loggers.Info, "The author(s) of this program cannot be held responsible for these additional costs\n")
-		loggers.Printf(loggers.Info, "More information about pricing : https://aws.amazon.com/glacier/pricing/\n")
-		loggers.Printf(loggers.Info, "####################################################################################\n")
+	loggers.Printf(loggers.Info, "###################################################################################\n")
+	loggers.Printf(loggers.Info, "The use of Amazone Web Service Glacier could generate additional costs.\n")
+	loggers.Printf(loggers.Info, "The author(s) of this program cannot be held responsible for these additional costs\n")
+	loggers.Printf(loggers.Info, "More information about pricing : https://aws.amazon.com/glacier/pricing/\n")
+	loggers.Printf(loggers.Info, "####################################################################################\n")
 }
 
 func displayWarnIfNotFreeTier(restorationContext *awsutils.RestorationContext) {

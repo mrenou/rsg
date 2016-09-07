@@ -5,6 +5,8 @@ import (
 	"rsg/loggers"
 	"io"
 	"time"
+	"strings"
+	"errors"
 )
 
 const S_1MB = 1024 * 1024
@@ -12,9 +14,19 @@ const S_1GB = 1024 * S_1MB
 
 func ExitIfError(err error) {
 	if (err != nil) {
-		loggers.Print(loggers.Error, err)
+		loggers.Printf(loggers.Error, "%v\n", translateAwsErrors(err))
 		os.Exit(1)
 	}
+}
+
+func translateAwsErrors(err error) error {
+	if strings.Contains(err.Error(),"NoCredentialProviders") {
+		return errors.New("No credentials found, check your ~/.aws/credentials (http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-started.html#cli-config-files) or give them as arguments (aws-id and aws-secret)")
+	}
+	if strings.Contains(err.Error(), "SignatureDoesNotMatch") {
+		return errors.New("Signature does not match, check your credentials")
+	}
+	return err
 }
 
 func Contains(values []string, toFind string) bool {

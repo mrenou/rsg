@@ -15,7 +15,6 @@ import (
 	"rsg/utils"
 	"os"
 	"path/filepath"
-	"errors"
 )
 
 func mockStartPartialRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, vault, archiveId, bytesRange, jobIdToReturn string) *mock.Call {
