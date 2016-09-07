@@ -15,7 +15,7 @@ func QueryYesOrNo(query string, defaultAnswer bool) bool {
 		} else {
 			no = strings.ToUpper(no)
 		}
-		loggers.Printf(loggers.Info, "%s[%s/%s]", query, yes, no)
+		loggers.Printf(loggers.Info, "%s[%s/%s] ", query, yes, no)
 		resp, err := StdinReader.ReadString('\n')
 		utils.ExitIfError(err)
 		resp = strings.TrimSuffix(resp, "\n")

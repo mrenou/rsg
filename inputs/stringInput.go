@@ -7,7 +7,7 @@ import (
 )
 
 func QueryString(query string) string {
-	loggers.Print(loggers.Info, query)
+	loggers.Printf(loggers.Info, "%v ", query)
 	answer, err := StdinReader.ReadString('\n')
 	utils.ExitIfError(err)
 	return strings.TrimSuffix(answer, "\n")

@@ -13,6 +13,7 @@ func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) 
 	if restorationContext.DestinationDirPath == "" {
 		restorationContext.DestinationDirPath = inputs.QueryString("what is the destination directory path ?")
 	}
+	loggers.Printf(loggers.Info, "destination directory path is %v\n", restorationContext.DestinationDirPath)
 	if stat, err := os.Stat(restorationContext.DestinationDirPath); !os.IsNotExist(err) {
 		if !stat.IsDir() {
 			return errors.New(fmt.Sprintf("destination directory is a file: %s", restorationContext.DestinationDirPath))
@@ -26,6 +27,5 @@ func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) 
 	if err := os.MkdirAll(restorationContext.DestinationDirPath, 0700); err != nil {
 		return errors.New(fmt.Sprintf("cannot create destination directory: %s", restorationContext.DestinationDirPath))
 	}
-	loggers.Printf(loggers.Info, "destination directory path is %v\n", restorationContext.DestinationDirPath)
 	return nil
 }
