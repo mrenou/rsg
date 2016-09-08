@@ -32,14 +32,15 @@ func (archiveRetrieve *archiveRetrieve) retrieveIsComplete() bool {
 }
 
 type archivePartRetrieve struct {
-	jobId         string
-	archiveId     string
-	retrievedSize uint64
-	size          uint64
+	jobId                string
+	archiveId            string
+	retrievedSize        uint64
+	archiveSize          uint64
+	nextByteIndexToWrite uint64
 }
 
 // + 10 is safety margin
-const archiveRetrieveStructSize = 92 + 138 + 8 + 8 + 8 + 8 + 10
+const archiveRetrieveStructSize = 92 + 138 + 8 + 8 + 8 + 10
 const _4hoursInSeconds = 60 * 60 * 4
 const _5minInSeconds = 60 * 5
 
@@ -142,7 +143,6 @@ func (downloadContext *DownloadContext) startArchiveRetrievingJobs() {
 func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetrieve {
 	var archiveToRetrieve *archiveRetrieve;
 	for archiveToRetrieve == nil && downloadContext.hasArchiveRows {
-
 		downloadContext.hasArchiveRows = downloadContext.archiveRows.Next()
 		if downloadContext.hasArchiveRows {
 			var archiveId string
@@ -150,21 +150,36 @@ func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetr
 			err := downloadContext.archiveRows.Scan(&archiveId, &fileSize)
 			utils.ExitIfError(err)
 
-			pathRows := downloadContext.loadPaths(archiveId)
-			for pathRows.Next() {
-				var path string
-				pathRows.Scan(&path)
-				if _, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + path); os.IsNotExist(err) {
-					archiveToRetrieve = &archiveRetrieve{archiveId, fileSize, 0}
-					break
+			if !downloadContext.checkAllFilesOfArchiveExists(archiveId) {
+				if stat, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + archiveId); !os.IsNotExist(err) {
+					loggers.Printf(loggers.Debug, "archive found: %v  \n", archiveId)
+					if !downloadContext.handleArchiveFileDownloadCompletion(archiveId, fileSize) {
+						archiveToRetrieve = &archiveRetrieve{archiveId, fileSize, uint64(stat.Size()) - (uint64(stat.Size()) % utils.S_1MB)}
+					}
 				} else {
-					loggers.Printf(loggers.Debug, "skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + path)
+					archiveToRetrieve = &archiveRetrieve{archiveId, fileSize, 0}
 				}
 			}
-			pathRows.Close()
 		}
 	}
 	return archiveToRetrieve
+}
+
+func (downloadContext *DownloadContext) checkAllFilesOfArchiveExists(archiveId string) bool {
+	pathRows := downloadContext.loadPaths(archiveId)
+	for pathRows.Next() {
+		var path string
+		pathRows.Scan(&path)
+
+		if _, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + path); os.IsNotExist(err) {
+			loggers.Printf(loggers.Debug, "file not found: %v/%v  \n", downloadContext.restorationContext.DestinationDirPath, path)
+			return false
+		} else {
+			loggers.Printf(loggers.Debug, "skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + path)
+		}
+	}
+	pathRows.Close()
+	return true
 }
 
 func (downloadContext *DownloadContext) computeSizeToRetrieve(archiveToRetrieve *archiveRetrieve) (uint64, bool) {
@@ -181,9 +196,12 @@ func (downloadContext *DownloadContext) startArchivePartRetrieveJob(archiveToRet
 	sizeToRetrieve, isEndOfFile := downloadContext.computeSizeToRetrieve(downloadContext.uncompletedRetrieve)
 	if (isEndOfFile || sizeToRetrieve / utils.S_1MB > 0) {
 		if success, jobId, sizeRetrieved := downloadContext.retryArchivePartRetrieveJob(archiveToRetrieve, sizeToRetrieve); success {
-			loggers.Printf(loggers.Debug, "job has started for archive id %s to retrieve %v bytes from %v byte index\n", archiveToRetrieve.archiveId, sizeRetrieved, archiveToRetrieve.nextByteIndexToRetrieve)
+			loggers.Printf(loggers.Debug, "job has started for archive id %s to retrieve %v bytes from %v byte index\n",
+				archiveToRetrieve.archiveId,
+				sizeRetrieved,
+				archiveToRetrieve.nextByteIndexToRetrieve)
+			archivePartRetrieve := &archivePartRetrieve{jobId, archiveToRetrieve.archiveId, sizeRetrieved, archiveToRetrieve.size, archiveToRetrieve.nextByteIndexToRetrieve}
 			archiveToRetrieve.nextByteIndexToRetrieve += sizeRetrieved
-			archivePartRetrieve := &archivePartRetrieve{jobId, archiveToRetrieve.archiveId, sizeRetrieved, archiveToRetrieve.size}
 			downloadContext.archivesRetrievingSize += sizeRetrieved
 			downloadContext.archivePartRetrieveList.PushFront(archivePartRetrieve)
 			downloadContext.handleArchiveRetrieveCompletion(archiveToRetrieve)
@@ -203,7 +221,6 @@ func (downloadContext *DownloadContext) retryArchivePartRetrieveJob(archiveToRet
 			awsutils.Archive{archiveToRetrieve.archiveId, archiveToRetrieve.size},
 			archiveToRetrieve.nextByteIndexToRetrieve,
 			sizeToRetrieve)
-		loggers.Printf(loggers.Debug, "ERR %v\n", err)
 		if err == nil {
 			return true, jobId, sizeRetrieved
 		}
@@ -265,25 +282,23 @@ func (downloadContext *DownloadContext) updateDownloadSpeed(downloadedSize uint6
 }
 
 func (downloadContext *DownloadContext) handleArchivePartDownloadCompletion(restorationContext *awsutils.RestorationContext) {
-	loggers.Printf(loggers.Debug, "pouet %v %v\n", downloadContext.nextByteIndexToDownload, downloadContext.uncompletedDownload.retrievedSize)
 	if (downloadContext.nextByteIndexToDownload >= downloadContext.uncompletedDownload.retrievedSize) {
-		loggers.Printf(loggers.Debug, "bim %v %v\n", downloadContext.nextByteIndexToDownload, downloadContext.uncompletedDownload.retrievedSize)
-		downloadContext.handleArchiveFileDownloadCompletion(restorationContext)
+		downloadContext.handleArchiveFileDownloadCompletion(downloadContext.uncompletedDownload.archiveId, downloadContext.uncompletedDownload.archiveSize)
 		downloadContext.uncompletedDownload = nil
 		downloadContext.nextByteIndexToDownload = 0
 	}
 }
 
-func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(restorationContext *awsutils.RestorationContext) {
-	file, err := os.Open(restorationContext.DestinationDirPath + "/" + downloadContext.uncompletedDownload.archiveId)
+func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(archiveId string, size uint64) bool {
+	destinationDirPath := downloadContext.restorationContext.DestinationDirPath
+	file, err := os.Open(destinationDirPath + "/" + archiveId)
 	utils.ExitIfError(err)
 	stat, err := file.Stat()
 	utils.ExitIfError(err)
-	loggers.Printf(loggers.Debug, "bam %v %v\n", stat.Size(), downloadContext.uncompletedDownload.size)
-	if uint64(stat.Size()) >= downloadContext.uncompletedDownload.size {
-		loggers.Printf(loggers.Debug, "archive %v downloaded\n", downloadContext.uncompletedDownload.archiveId)
+	if uint64(stat.Size()) >= size {
+		loggers.Printf(loggers.Debug, "archive %v downloaded\n", archiveId)
 
-		pathRows := downloadContext.loadPaths(downloadContext.uncompletedDownload.archiveId)
+		pathRows := downloadContext.loadPaths(archiveId)
 		defer pathRows.Close()
 		var previousPath string
 		if pathRows.Next() {
@@ -292,19 +307,21 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(rest
 		for pathRows.Next() {
 			var path string
 			pathRows.Scan(&path)
-			err := os.MkdirAll(filepath.Dir(downloadContext.restorationContext.DestinationDirPath + "/" + previousPath), 0700)
+			err := os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
 			utils.ExitIfError(err)
-			utils.CopyFile(restorationContext.DestinationDirPath + "/" + previousPath, restorationContext.DestinationDirPath + "/" + downloadContext.uncompletedDownload.archiveId)
-			loggers.Printf(loggers.Debug, "file %v restored (copy from %v)\n", downloadContext.restorationContext.DestinationDirPath + "/" + previousPath, downloadContext.uncompletedDownload.archiveId)
+			utils.CopyFile(destinationDirPath + "/" + previousPath, destinationDirPath + "/" + archiveId)
+			loggers.Printf(loggers.Debug, "file %v restored (copy from %v)\n", destinationDirPath + "/" + previousPath, archiveId)
 			previousPath = path;
 		}
 		if previousPath != "" {
-			err := os.MkdirAll(filepath.Dir(downloadContext.restorationContext.DestinationDirPath + "/" + previousPath), 0700)
+			err := os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
 			utils.ExitIfError(err)
-			os.Rename(restorationContext.DestinationDirPath + "/" + downloadContext.uncompletedDownload.archiveId, restorationContext.DestinationDirPath + "/" + previousPath)
-			loggers.Printf(loggers.Debug, "file %v restored (rename from %v)\n", downloadContext.restorationContext.DestinationDirPath + "/" + previousPath, downloadContext.uncompletedDownload.archiveId)
+			os.Rename(destinationDirPath + "/" + archiveId, destinationDirPath + "/" + previousPath)
+			loggers.Printf(loggers.Debug, "file %v restored (rename from %v)\n", destinationDirPath + "/" + previousPath, archiveId)
 		}
+		return true
 	}
+	return false
 }
 
 func (downloadContext *DownloadContext) waitNextArchivePartIsRetrieved() *archivePartRetrieve {
@@ -321,7 +338,14 @@ func downloadArchivePart(restorationContext *awsutils.RestorationContext, archiv
 		sizeToDownload = nbBytesCanDownload
 	}
 	start := time.Now()
-	sizeDownloaded := awsutils.DownloadPartialArchiveTo(restorationContext, restorationContext.Vault, archivePartRetrieve.jobId, restorationContext.DestinationDirPath + "/" + archivePartRetrieve.archiveId, fromByteIndex, sizeToDownload)
+	sizeDownloaded := awsutils.DownloadPartialArchiveTo(restorationContext,
+		restorationContext.Vault,
+		archivePartRetrieve.jobId,
+		restorationContext.DestinationDirPath + "/" + archivePartRetrieve.archiveId,
+		fromByteIndex,
+		sizeToDownload,
+		archivePartRetrieve.nextByteIndexToWrite)
+	archivePartRetrieve.nextByteIndexToWrite += sizeDownloaded
 	return sizeDownloaded, time.Since(start)
 }
 
@@ -345,8 +369,8 @@ func (downloadContext *DownloadContext) loadArchives() *sql.Rows {
 			where += "basepath LIKE '" + filter + "'"
 		}
 	}
-	sqlQuery := "SELECT archiveId, fileSize FROM file_info_tb " + where + " ORDER BY key"
-	loggers.Printf(loggers.Debug, "Query mapping file for archives with %v\n", sqlQuery)
+	sqlQuery := "SELECT DISTINCT archiveId, fileSize FROM file_info_tb " + where + " ORDER BY key"
+	loggers.Printf(loggers.Debug, "query mapping file for archives with %v\n", sqlQuery)
 	rows, err := downloadContext.db.Query(sqlQuery)
 	utils.ExitIfError(err)
 	downloadContext.archiveRows = rows
@@ -354,7 +378,7 @@ func (downloadContext *DownloadContext) loadArchives() *sql.Rows {
 }
 
 func (downloadContext *DownloadContext) loadPaths(archiveId string) *sql.Rows {
-	stmt, err := downloadContext.db.Prepare("SELECT basePath FROM file_info_tb WHERE archiveId = ?")
+	stmt, err := downloadContext.db.Prepare("SELECT DISTINCT basePath FROM file_info_tb WHERE archiveId = ?")
 	utils.ExitIfError(err)
 	defer stmt.Close()
 	rows, err := stmt.Query(archiveId)

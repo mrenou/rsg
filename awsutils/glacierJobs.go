@@ -45,13 +45,13 @@ func JobIsCompleted(restorationContext *RestorationContext, vault, jobId string)
 }
 
 func DownloadArchiveTo(restorationContext *RestorationContext, vault, jobId string, filename string) uint64 {
-	return DownloadPartialArchiveTo(restorationContext, vault, jobId, filename, 0, 0)
+	return DownloadPartialArchiveTo(restorationContext, vault, jobId, filename, 0, 0, 0)
 }
 
-func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, jobId string, destPath string, fromByte, sizeToDownload uint64) uint64 {
+func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, jobId string, destPath string, fromByteToDownload, sizeToDownload, fromByteToWrite uint64) uint64 {
 	var rangeToRetrieve *string = nil
 	if sizeToDownload != 0 {
-		rangeToRetrieve = aws.String(strconv.FormatUint(fromByte, 10) + "-" + strconv.FormatUint(fromByte + sizeToDownload - 1, 10))
+		rangeToRetrieve = aws.String(strconv.FormatUint(fromByteToDownload, 10) + "-" + strconv.FormatUint(fromByteToDownload + sizeToDownload - 1, 10))
 	}
 	params := &glacier.GetJobOutputInput{
 		AccountId: aws.String(restorationContext.AccountId),
@@ -64,11 +64,8 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 	utils.ExitIfError(err)
 	defer resp.Body.Close()
 	var file *os.File;
-	if _, err := os.Stat(destPath); os.IsNotExist(err) {
-		file, err = os.Create(destPath)
-	} else {
-		file, err = os.OpenFile(destPath, os.O_APPEND | os.O_WRONLY, 0600)
-	}
+	file, err = os.OpenFile(destPath, os.O_CREATE | os.O_RDWR, 0600)
+	file.Seek(int64(fromByteToWrite), os.SEEK_SET)
 	utils.ExitIfError(err)
 	loggers.Printf(loggers.Debug, "copy file into: %v\n", destPath)
 	written, err := io.Copy(file, resp.Body)
