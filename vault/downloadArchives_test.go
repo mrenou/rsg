@@ -335,6 +335,45 @@ func TestDownloadArchives_retrieve_and_download_only_filtered_files(t *testing.T
 	assertFileContent(t, "../../testtmp/dest/data/iwantthis", "ok")
 }
 
+func TestDownloadArchives_compute_total_size(t *testing.T) {
+	// Given
+	buffer := CommonInitTest()
+	glacierMock, restorationContext := InitTest()
+	restorationContext.Filters = []string{"data/folder/*", "*.info", "data/file??.bin", "data/iwantthis" }
+	downloadContext := DownloadContext{
+		restorationContext: restorationContext,
+		bytesBySecond: 3496, // 1048800 on 5 min
+		maxArchivesRetrievingSize: utils.S_1MB * 2,
+		downloadSpeedAutoUpdate: false,
+		archivesRetrievingSize: 0,
+		archivePartRetrieveListMaxSize: 10,
+		archivePartRetrieveList: nil,
+		hasArchiveRows: false,
+		db: nil,
+		archiveRows:nil,
+	}
+
+	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
+	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'archiveId1', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file2.bin', 'archiveId2', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file3.txt', 'archiveId1', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/no', 'archiveId3', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/nop', 'archiveId1', 2);")
+	db.Close()
+
+	mockStartPartialRetrieveJobForAny(glacierMock, "jobId")
+	mockDescribeJobForAny(glacierMock, true)
+	mockPartialOutputJobForAny(glacierMock, []byte("ok"))
+
+	// When
+	downloadContext.downloadArchives()
+
+	// Then
+	assert.Contains(t, string(buffer.Bytes()), "4B to restore")
+
+}
+
 func TestDownloadArchives_retrieve_and_download_an_archive_already_started(t *testing.T) {
 	// Given
 	CommonInitTest()

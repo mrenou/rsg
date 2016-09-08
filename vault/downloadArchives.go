@@ -98,13 +98,15 @@ func (downloadContext *DownloadContext) downloadArchives() {
 		utils.ExitIfError(errors.New("max archives retrieving size cannot be less than 1MB"))
 	}
 
-	db := downloadContext.loadDb()
+	db := InitDb(downloadContext.restorationContext.GetMappingFilePath())
+	downloadContext.db = db
 	defer db.Close()
 
-	rows := downloadContext.loadArchives()
-	defer rows.Close()
+	archiveRows := GetArchives(db, downloadContext.restorationContext.Filters)
+	downloadContext.archiveRows = archiveRows
+	defer archiveRows.Close()
 
-	downloadContext.loadTotalSize()
+	downloadContext.nbBytesToDownload = GetTotalSize(db, downloadContext.restorationContext.Filters)
 	loggers.Printf(loggers.Info, "%v to restore\n", bytefmt.ByteSize(downloadContext.nbBytesToDownload))
 
 	downloadContext.archivePartRetrieveList = list.New()
@@ -166,7 +168,7 @@ func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetr
 }
 
 func (downloadContext *DownloadContext) checkAllFilesOfArchiveExists(archiveId string) bool {
-	pathRows := downloadContext.loadPaths(archiveId)
+	pathRows := GetPaths(downloadContext.db, archiveId)
 	for pathRows.Next() {
 		var path string
 		pathRows.Scan(&path)
@@ -299,7 +301,7 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(arch
 	if uint64(stat.Size()) >= size {
 		loggers.Printf(loggers.Debug, "archive %v downloaded\n", archiveId)
 
-		pathRows := downloadContext.loadPaths(archiveId)
+		pathRows := GetPaths(downloadContext.db, archiveId)
 		defer pathRows.Close()
 		var previousPath string
 		if pathRows.Next() {
@@ -351,47 +353,47 @@ func downloadArchivePart(restorationContext *awsutils.RestorationContext, archiv
 	archivePartRetrieve.nextByteIndexToWrite += sizeDownloaded
 	return sizeDownloaded, time.Since(start)
 }
-
-func (downloadContext *DownloadContext) loadDb() *sql.DB {
-	db, err := sql.Open("sqlite3", downloadContext.restorationContext.GetMappingFilePath())
-	utils.ExitIfError(err)
-	downloadContext.db = db
-	return db
-}
-
-func (downloadContext *DownloadContext) loadArchives() *sql.Rows {
-	where := ""
-	if len(downloadContext.restorationContext.Filters) > 0 {
-		where = "WHERE "
-		for i, filter := range downloadContext.restorationContext.Filters {
-			filter = strings.Replace(filter, "*", "%", -1)
-			filter = strings.Replace(filter, "?", "_", -1)
-			if i > 0 {
-				where += " OR "
-			}
-			where += "basepath LIKE '" + filter + "'"
-		}
-	}
-	sqlQuery := "SELECT DISTINCT archiveId, fileSize FROM file_info_tb " + where + " ORDER BY key"
-	loggers.Printf(loggers.Debug, "query mapping file for archives with %v\n", sqlQuery)
-	rows, err := downloadContext.db.Query(sqlQuery)
-	utils.ExitIfError(err)
-	downloadContext.archiveRows = rows
-	return rows
-}
-
-func (downloadContext *DownloadContext) loadPaths(archiveId string) *sql.Rows {
-	stmt, err := downloadContext.db.Prepare("SELECT DISTINCT basePath FROM file_info_tb WHERE archiveId = ?")
-	utils.ExitIfError(err)
-	defer stmt.Close()
-	rows, err := stmt.Query(archiveId)
-	utils.ExitIfError(err)
-	return rows
-}
-
-func (downloadContext *DownloadContext) loadTotalSize() {
-	row := downloadContext.db.QueryRow("SELECT sum(fileSize) FROM file_info_tb")
-	err := row.Scan(&downloadContext.nbBytesToDownload)
-	utils.ExitIfError(err)
-}
-
+//
+//func (downloadContext *DownloadContext) loadDb() *sql.DB {
+//	db, err := sql.Open("sqlite3", downloadContext.restorationContext.GetMappingFilePath())
+//	utils.ExitIfError(err)
+//	downloadContext.db = db
+//	return db
+//}
+//
+//func (downloadContext *DownloadContext) loadArchives() *sql.Rows {
+//	where := ""
+//	if len(downloadContext.restorationContext.Filters) > 0 {
+//		where = "WHERE "
+//		for i, filter := range downloadContext.restorationContext.Filters {
+//			filter = strings.Replace(filter, "*", "%", -1)
+//			filter = strings.Replace(filter, "?", "_", -1)
+//			if i > 0 {
+//				where += " OR "
+//			}
+//			where += "basepath LIKE '" + filter + "'"
+//		}
+//	}
+//	sqlQuery := "SELECT DISTINCT archiveId, fileSize FROM file_info_tb " + where + " ORDER BY key"
+//	loggers.Printf(loggers.Debug, "query mapping file for archives with %v\n", sqlQuery)
+//	rows, err := downloadContext.db.Query(sqlQuery)
+//	utils.ExitIfError(err)
+//	downloadContext.archiveRows = rows
+//	return rows
+//}
+//
+//func (downloadContext *DownloadContext) loadPaths(archiveId string) *sql.Rows {
+//	stmt, err := downloadContext.db.Prepare("SELECT DISTINCT basePath FROM file_info_tb WHERE archiveId = ?")
+//	utils.ExitIfError(err)
+//	defer stmt.Close()
+//	rows, err := stmt.Query(archiveId)
+//	utils.ExitIfError(err)
+//	return rows
+//}
+//
+//func (downloadContext *DownloadContext) loadTotalSize() {
+//	row := downloadContext.db.QueryRow("SELECT sum(fileSize) FROM file_info_tb")
+//	err := row.Scan(&downloadContext.nbBytesToDownload)
+//	utils.ExitIfError(err)
+//}
+//
