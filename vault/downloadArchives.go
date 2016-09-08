@@ -171,11 +171,12 @@ func (downloadContext *DownloadContext) checkAllFilesOfArchiveExists(archiveId s
 		var path string
 		pathRows.Scan(&path)
 
-		if _, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + path); os.IsNotExist(err) {
+		if utils.Exists(downloadContext.restorationContext.DestinationDirPath + "/" + path) {
+			loggers.Printf(loggers.Debug, "skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + path)
+		} else {
 			loggers.Printf(loggers.Debug, "file not found: %v/%v  \n", downloadContext.restorationContext.DestinationDirPath, path)
 			return false
-		} else {
-			loggers.Printf(loggers.Debug, "skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + path)
+
 		}
 	}
 	pathRows.Close()
@@ -307,13 +308,15 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(arch
 		for pathRows.Next() {
 			var path string
 			pathRows.Scan(&path)
-			err := os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
-			utils.ExitIfError(err)
-			utils.CopyFile(destinationDirPath + "/" + previousPath, destinationDirPath + "/" + archiveId)
-			loggers.Printf(loggers.Debug, "file %v restored (copy from %v)\n", destinationDirPath + "/" + previousPath, archiveId)
+			if !utils.Exists(destinationDirPath + "/" + previousPath) {
+				err := os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
+				utils.ExitIfError(err)
+				utils.CopyFile(destinationDirPath + "/" + previousPath, destinationDirPath + "/" + archiveId)
+				loggers.Printf(loggers.Debug, "file %v restored (copy from %v)\n", destinationDirPath + "/" + previousPath, archiveId)
+			}
 			previousPath = path;
 		}
-		if previousPath != "" {
+		if previousPath != "" && !utils.Exists(destinationDirPath + "/" + previousPath) {
 			err := os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
 			utils.ExitIfError(err)
 			os.Rename(destinationDirPath + "/" + archiveId, destinationDirPath + "/" + previousPath)

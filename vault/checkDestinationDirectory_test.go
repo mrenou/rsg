@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"bufio"
 	"bytes"
+	"rsg/utils"
 )
 
 func TestCheckDestination_dest_is_not_defined(t *testing.T) {
@@ -57,7 +58,7 @@ func TestCheckDestination_answer_no_but_not_confirm_when_dest_already_exist(t *t
 	CheckDestinationDirectory(restorationContext)
 
 	// Then
-	if _, err := os.Stat("../../testtmp/dest/data"); os.IsNotExist(err) {
+	if !utils.Exists("../../testtmp/dest/data") {
 		assert.Fail(t, "../../testtmp/dest/data directory should exist")
 	}
 
@@ -75,7 +76,7 @@ func TestCheckDestination_answer_no_and_confirm_when_dest_already_exist(t *testi
 	CheckDestinationDirectory(restorationContext)
 
 	// Then
-	if _, err := os.Stat("../../testtmp/dest/data"); !os.IsNotExist(err) {
+	if utils.Exists("../../testtmp/dest/data") {
 		assert.Fail(t, "../../testtmp/dest/data directory should not exist")
 	}
 
@@ -93,7 +94,7 @@ func TestCheckDestination_answer_yes_when_dest_already_exist(t *testing.T) {
 	CheckDestinationDirectory(restorationContext)
 
 	// Then
-	if _, err := os.Stat("../../testtmp/dest/data"); os.IsNotExist(err) {
+	if !utils.Exists("../../testtmp/dest/data") {
 		assert.Fail(t, "../../testtmp/dest/data directory should exist")
 	}
 

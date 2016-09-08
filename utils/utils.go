@@ -4,7 +4,6 @@ import "os"
 import (
 	"rsg/loggers"
 	"io"
-	"time"
 	"strings"
 	"errors"
 )
@@ -57,13 +56,11 @@ func CopyFile(dst, src string) error {
 	return d.Close()
 }
 
-func WaitNextHour() {
-	actualHour := time.Now().Hour()
-	for {
-		time.Sleep(time.Duration(60 - time.Now().Minute()) * time.Minute)
-		if time.Now().Hour() != actualHour {
-			break
-		}
+func Exists(path string) bool {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		return false
+	} else {
+		return true
 	}
 }
 
