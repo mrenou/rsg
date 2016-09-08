@@ -151,8 +151,6 @@ func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetr
 			utils.ExitIfError(err)
 
 			pathRows := downloadContext.loadPaths(archiveId)
-			defer pathRows.Close()
-
 			for pathRows.Next() {
 				var path string
 				pathRows.Scan(&path)
@@ -163,6 +161,7 @@ func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetr
 					loggers.Printf(loggers.Debug, "skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + path)
 				}
 			}
+			pathRows.Close()
 		}
 	}
 	return archiveToRetrieve
