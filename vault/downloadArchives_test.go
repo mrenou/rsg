@@ -283,7 +283,7 @@ func TestDownloadArchives_retrieve_and_download_only_filtered_files(t *testing.T
 	// Given
 	CommonInitTest()
 	glacierMock, restorationContext := InitTest()
-	restorationContext.Filters = []string{"data/folder/*", "*.info", "data/file??.bin", "data/iwantthis" }
+	restorationContext.Options.Filters = []string{"data/folder/*", "*.info", "data/file??.bin", "data/iwantthis" }
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		bytesBySecond: 3496, // 1048800 on 5 min
@@ -339,7 +339,7 @@ func TestDownloadArchives_compute_total_size(t *testing.T) {
 	// Given
 	buffer := CommonInitTest()
 	glacierMock, restorationContext := InitTest()
-	restorationContext.Filters = []string{"data/folder/*", "*.info", "data/file??.bin", "data/iwantthis" }
+	restorationContext.Options.Filters = []string{"data/folder/*", "*.info", "data/file??.bin", "data/iwantthis" }
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		bytesBySecond: 3496, // 1048800 on 5 min

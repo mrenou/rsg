@@ -18,14 +18,27 @@ func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) 
 		if !stat.IsDir() {
 			return errors.New(fmt.Sprintf("destination directory is a file: %s", restorationContext.DestinationDirPath))
 		}
-		if !inputs.QueryYesOrNo("destination directory already exists, do you want to keep existing files ?", true) {
-			if inputs.QueryYesOrNo("are you sure, all existing files restored will be deleted ?", false) {
-				os.RemoveAll(restorationContext.DestinationDirPath)
-			}
+		if !queryAndUpdateKeepFiles(restorationContext) {
+			os.RemoveAll(restorationContext.DestinationDirPath)
 		}
 	}
 	if err := os.MkdirAll(restorationContext.DestinationDirPath, 0700); err != nil {
 		return errors.New(fmt.Sprintf("cannot create destination directory: %s", restorationContext.DestinationDirPath))
 	}
 	return nil
+}
+
+func queryAndUpdateKeepFiles(restorationContext *awsutils.RestorationContext) bool {
+	for restorationContext.Options.KeepFiles == nil {
+		if !inputs.QueryYesOrNo("destination directory already exists, do you want to keep existing files ?", true) {
+			if inputs.QueryYesOrNo("are you sure, all existing files restored will be deleted ?", false) {
+				tmp := false
+				restorationContext.Options.KeepFiles = &tmp
+			}
+		} else {
+			tmp := true
+			restorationContext.Options.KeepFiles = &tmp
+		}
+	}
+	return *restorationContext.Options.KeepFiles
 }

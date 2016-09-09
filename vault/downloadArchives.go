@@ -67,7 +67,6 @@ func (downloadContext *DownloadContext) archivesRetrievingSizeLeft() uint64 {
 }
 
 func DownloadArchives(restorationContext *awsutils.RestorationContext) {
-	inputs.QueryString("Here We GO ?")
 	downloadContext := new(DownloadContext)
 	downloadContext.restorationContext = restorationContext
 	downloadContext.downloadSpeedAutoUpdate = true
@@ -103,11 +102,11 @@ func (downloadContext *DownloadContext) downloadArchives() {
 	downloadContext.db = db
 	defer db.Close()
 
-	archiveRows := GetArchives(db, downloadContext.restorationContext.Filters)
+	archiveRows := GetArchives(db, downloadContext.restorationContext.Options.Filters)
 	downloadContext.archiveRows = archiveRows
 	defer archiveRows.Close()
 
-	downloadContext.nbBytesToDownload = GetTotalSize(db, downloadContext.restorationContext.Filters)
+	downloadContext.nbBytesToDownload = GetTotalSize(db, downloadContext.restorationContext.Options.Filters)
 	loggers.Printf(loggers.Info, "%v to restore\n", bytefmt.ByteSize(downloadContext.nbBytesToDownload))
 
 	downloadContext.archivePartRetrieveList = list.New()

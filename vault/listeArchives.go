@@ -10,7 +10,7 @@ func ListArchives(restorationContext *awsutils.RestorationContext) {
 	db := InitDb(restorationContext.GetMappingFilePath())
 	defer db.Close()
 
-	archiveRows := GetFiles(db, restorationContext.Filters)
+	archiveRows := GetFiles(db, restorationContext.Options.Filters)
 	defer archiveRows.Close()
 
 	for archiveRows.Next() {

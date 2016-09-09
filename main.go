@@ -2,36 +2,25 @@ package main
 
 import (
 	"rsg/vault"
-	flag "github.com/spf13/pflag"
 	"rsg/loggers"
 	"rsg/awsutils"
 	"rsg/utils"
+	"rsg/options"
 	_ "github.com/mattn/go-sqlite3"
 )
-
-type Options struct {
-	awsId     string
-	awsSecret string
-	debug     bool
-	dest      string
-	filters   []string
-	list      bool
-	region    string
-	vault     string
-}
 
 func main() {
 	loggers.InitDefaultLog()
 	displayInfoAboutCosts()
-	options := parseOptions()
-	session := awsutils.BuildSession(options.awsId, options.awsSecret)
+	options := options.ParseOptions()
+	session := awsutils.BuildSession(options.AwsId, options.AwsSecret)
 	accountId, err := awsutils.GetAccountId(session)
 	utils.ExitIfError(err)
-	region, vaultName := vault.SelectRegionVault(accountId, session, options.region, options.vault)
-	restorationContext := awsutils.CreateRestorationContext(session, accountId, region, vaultName, options.dest)
+	region, vaultName := vault.SelectRegionVault(accountId, session, options.Region, options.Vault)
+	restorationContext := awsutils.CreateRestorationContext(session, accountId, region, vaultName, options)
 	displayWarnIfNotFreeTier(restorationContext)
 	vault.DownloadMappingArchive(restorationContext)
-	if options.list {
+	if options.List {
 		vault.ListArchives(restorationContext)
 	} else {
 		err = vault.CheckDestinationDirectory(restorationContext)
@@ -40,39 +29,6 @@ func main() {
 	}
 }
 
-func parseOptions() Options {
-	options := Options{}
-
-	flag.StringVarP(&options.region, "region", "r", "", "region of the vault to restore")
-	flag.StringVarP(&options.vault, "vault", "v", "", "vault to restore")
-	flag.BoolVarP(&options.debug, "debug", "x", false, "display debug info")
-	flag.StringSliceVarP(&options.filters, "filter", "f", []string{}, "filter files to restore (globals * and ?")
-	flag.StringVar(&options.awsId, "aws-id", "", "id of aws credentials")
-	flag.StringVar(&options.awsSecret, "aws-secret", "", "secret of aws credentials")
-	flag.StringVarP(&options.dest, "destination", "d", "", "path to restoration directory")
-	flag.BoolVarP(&options.list, "list", "l", true, "list files")
-	flag.Parse()
-
-	awsIdTruncated := ""
-	awsSecretTruncated := ""
-	if len(options.awsId) > 3 {
-		awsIdTruncated = options.awsId[0:3] + "..."
-	}
-	if len(options.awsSecret) > 3 {
-		awsSecretTruncated = options.awsSecret[0:3] + "..."
-	}
-
-	loggers.DebugFlag = options.debug
-	loggers.Printf(loggers.Debug, "options aws-id: %v\n", awsIdTruncated)
-	loggers.Printf(loggers.Debug, "options aws-secret: %v\n", awsSecretTruncated)
-	loggers.Printf(loggers.Debug, "options debug: %v\n", options.debug)
-	loggers.Printf(loggers.Debug, "options destination: %v \n", options.dest)
-	loggers.Printf(loggers.Debug, "options filters: %v \n", options.filters)
-	loggers.Printf(loggers.Debug, "options list: %v \n", options.list)
-	loggers.Printf(loggers.Debug, "options region: %v \n", options.region)
-	loggers.Printf(loggers.Debug, "options vault: %v \n", options.vault)
-	return options
-}
 
 func displayInfoAboutCosts() {
 	loggers.Printf(loggers.Info, "###################################################################################\n")

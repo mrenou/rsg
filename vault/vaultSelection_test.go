@@ -22,7 +22,7 @@ func TestSelectRegionVaultFromSynologyVaults_when_there_is_one_synology_vault(t 
 
 	assert.Equal(t, "region1", region)
 	assert.Equal(t, "vault1", vault)
-	assert.Equal(t, "synology backup vault used for the restoration: region1:vault1\n", string(buffer.Bytes()))
+	assert.Equal(t, "synology backup vault used: region1:vault1\n", string(buffer.Bytes()))
 
 }
 
@@ -59,9 +59,9 @@ func TestSelectRegionVaultFromSynologyVaults_when_there_is_several_synology_vaul
 	assert.Equal(t, "region1", region)
 	assert.Equal(t, "vault1", vault)
 	assert.Equal(t, "region1:vault1\nregion1:vault2\nregion2:vault3\nregion3:vault1\n" +
-	"Select the region of the vault to use for the restoration: " +
-	"Select the vault to use for the restoration: " +
-	"synology backup vault used for the restoration: region1:vault1\n", string(buffer.Bytes()))
+	"Select the region of the vault to use: " +
+	"Select the vault to use: " +
+	"synology backup vault used: region1:vault1\n", string(buffer.Bytes()))
 
 }
 
@@ -82,10 +82,10 @@ func TestSelectRegionVaultFromSynologyVaults_retry_to_give_vault_to_use(t *testi
 	assert.Equal(t, "region1", region)
 	assert.Equal(t, "vault1", vault)
 	assert.Equal(t, "region1:vault1\nregion1:vault2\nregion2:vault3\nregion3:vault1\n" +
-	"Select the region of the vault to use for the restoration: " +
-	"Select the vault to use for the restoration: " +
+	"Select the region of the vault to use: " +
+	"Select the vault to use: " +
 	"vault or region doesn't exist. Try again...\n" +
-	"Select the region of the vault to use for the restoration: " +
-	"Select the vault to use for the restoration: " +
-	"synology backup vault used for the restoration: region1:vault1\n", string(buffer.Bytes()))
+	"Select the region of the vault to use: " +
+	"Select the vault to use: " +
+	"synology backup vault used: region1:vault1\n", string(buffer.Bytes()))
 }

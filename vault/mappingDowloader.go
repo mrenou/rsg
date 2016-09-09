@@ -19,13 +19,18 @@ import (
 func DownloadMappingArchive(restorationContext *awsutils.RestorationContext) {
 	if stat, err := os.Stat(restorationContext.GetMappingFilePath()); os.IsNotExist(err) {
 		downloadMappingArchive(restorationContext)
-	} else {
-		if inputs.QueryYesOrNo(fmt.Sprintf("local mapping archive already exists with last modification date %v, retrieve a new mapping file ?", stat.ModTime().Format("Mon Jan _2 15:04:05 2006")), false) {
+	} else if queryAndUpdateRefreshMappingFile(restorationContext, stat.ModTime().Format("Mon Jan _2 15:04:05 2006")) {
 			os.Remove(restorationContext.GetMappingFilePath())
 			downloadMappingArchive(restorationContext)
-		}
 	}
+}
 
+func queryAndUpdateRefreshMappingFile(restorationContext *awsutils.RestorationContext, modTime string) bool {
+	if restorationContext.Options.RefreshMappingFile == nil {
+		answer := inputs.QueryYesOrNo(fmt.Sprintf("local mapping archive already exists with last modification date %v, retrieve a new mapping file ?", modTime), false)
+		restorationContext.Options.RefreshMappingFile = &answer
+	}
+	return *restorationContext.Options.RefreshMappingFile
 }
 
 func downloadMappingArchive(restorationContext *awsutils.RestorationContext) {
@@ -68,7 +73,7 @@ func checkRetrieveMappingOrStartNewJob(restorationContext *awsutils.RestorationC
 }
 
 func startRetrieveMappingArchiveJob(restorationContext *awsutils.RestorationContext, vault string, archive awsutils.Archive) string {
-	jobId,_, err := awsutils.StartRetrieveArchiveJob(restorationContext, restorationContext.MappingVault, archive)
+	jobId, _, err := awsutils.StartRetrieveArchiveJob(restorationContext, restorationContext.MappingVault, archive)
 	utils.ExitIfError(err)
 	restorationContext.RegionVaultCache.MappingVaultRetrieveJobId = jobId
 	restorationContext.WriteRegionVaultCache()

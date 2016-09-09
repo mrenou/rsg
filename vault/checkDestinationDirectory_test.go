@@ -47,12 +47,12 @@ func TestCheckDestination_dest_not_exist(t *testing.T) {
 	assert.Equal(t, "destination directory path is ../../testtmp/dest\n", string(buffer.Bytes()))
 }
 
-func TestCheckDestination_answer_no_but_not_confirm_when_dest_already_exist(t *testing.T) {
+func TestCheckDestination_answer_no_but_not_confirm_first_when_dest_already_exist(t *testing.T) {
 	// Given
 	buffer := CommonInitTest()
 	restorationContext := DefaultRestorationContext(nil)
 	os.MkdirAll("../../testtmp/dest/data", 0700)
-	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("n\n\n")))
+	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("n\n\ny\n")))
 
 	// When
 	CheckDestinationDirectory(restorationContext)
@@ -62,7 +62,7 @@ func TestCheckDestination_answer_no_but_not_confirm_when_dest_already_exist(t *t
 		assert.Fail(t, "../../testtmp/dest/data directory should exist")
 	}
 
-	assert.Equal(t, "destination directory path is ../../testtmp/dest\ndestination directory already exists, do you want to keep existing files ?[Y/n] are you sure, all existing files restored will be deleted ?[y/N] ", string(buffer.Bytes()))
+	assert.Equal(t, "destination directory path is ../../testtmp/dest\ndestination directory already exists, do you want to keep existing files ?[Y/n] are you sure, all existing files restored will be deleted ?[y/N] destination directory already exists, do you want to keep existing files ?[Y/n] ", string(buffer.Bytes()))
 }
 
 func TestCheckDestination_answer_no_and_confirm_when_dest_already_exist(t *testing.T) {
