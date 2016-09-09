@@ -71,10 +71,10 @@ func DownloadArchives(restorationContext *awsutils.RestorationContext) {
 	downloadContext.restorationContext = restorationContext
 	downloadContext.downloadSpeedAutoUpdate = true
 	downloadContext.archivePartRetrieveListMaxSize = utils.S_1GB / archiveRetrieveStructSize
-	downloadContext.maxArchivesRetrievingSize = downloadContext.bytesBySecond * uint64(_4hoursInSeconds)
 	if downloadContext.bytesBySecond == 0 {
 		downloadContext.bytesBySecond = detectOrSelectDownloadSpeed(restorationContext)
 	}
+	downloadContext.maxArchivesRetrievingSize = downloadContext.bytesBySecond * uint64(_4hoursInSeconds)
 	downloadContext.downloadArchives()
 }
 

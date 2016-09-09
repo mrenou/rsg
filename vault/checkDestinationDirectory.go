@@ -10,22 +10,26 @@ import (
 )
 
 func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) error {
-	if restorationContext.DestinationDirPath == "" {
-		restorationContext.DestinationDirPath = inputs.QueryString("what is the destination directory path ?")
-	}
-	loggers.Printf(loggers.OptionalInfo, "destination directory path is %v\n", restorationContext.DestinationDirPath)
-	if stat, err := os.Stat(restorationContext.DestinationDirPath); !os.IsNotExist(err) {
-		if !stat.IsDir() {
-			return errors.New(fmt.Sprintf("destination directory is a file: %s", restorationContext.DestinationDirPath))
+	for {
+		if restorationContext.DestinationDirPath == "" {
+			restorationContext.DestinationDirPath = inputs.QueryString("what is the destination directory path ?")
 		}
-		if !queryAndUpdateKeepFiles(restorationContext) {
-			os.RemoveAll(restorationContext.DestinationDirPath)
+		loggers.Printf(loggers.OptionalInfo, "destination directory path is %v\n", restorationContext.DestinationDirPath)
+		if stat, err := os.Stat(restorationContext.DestinationDirPath); !os.IsNotExist(err) {
+			if !stat.IsDir() {
+				return errors.New(fmt.Sprintf("destination directory is a file: %s", restorationContext.DestinationDirPath))
+			}
+			if !queryAndUpdateKeepFiles(restorationContext) {
+				os.RemoveAll(restorationContext.DestinationDirPath)
+			}
+		}
+		if err := os.MkdirAll(restorationContext.DestinationDirPath, 0700); err != nil {
+			loggers.Printf(loggers.Error, "cannot create destination directory %s : %v\n", restorationContext.DestinationDirPath, err)
+			restorationContext.DestinationDirPath = ""
+		} else {
+			return nil
 		}
 	}
-	if err := os.MkdirAll(restorationContext.DestinationDirPath, 0700); err != nil {
-		return errors.New(fmt.Sprintf("cannot create destination directory: %s", restorationContext.DestinationDirPath))
-	}
-	return nil
 }
 
 func queryAndUpdateKeepFiles(restorationContext *awsutils.RestorationContext) bool {
