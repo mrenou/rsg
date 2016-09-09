@@ -12,7 +12,7 @@ import (
 
 func TestSelectRegionVaultFromSynologyVaults_when_there_is_one_synology_vault(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	loggers.InitLog(os.Stdout, buffer, buffer, buffer)
+	loggers.InitLog(os.Stdout, buffer, buffer, buffer, buffer)
 
 	synologyVaults := []*SynologyCoupleVault{
 		&SynologyCoupleVault{"region1", "vault1", nil, nil},
@@ -28,7 +28,7 @@ func TestSelectRegionVaultFromSynologyVaults_when_there_is_one_synology_vault(t 
 
 func TestSelectRegionVaultFromSynologyVaults_when_there_is_no_synology_vault(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	loggers.InitLog(os.Stdout, buffer, buffer, buffer)
+	loggers.InitLog(os.Stdout, buffer, buffer, buffer, buffer)
 
 	synologyVaults := []*SynologyCoupleVault{
 
@@ -44,7 +44,7 @@ func TestSelectRegionVaultFromSynologyVaults_when_there_is_no_synology_vault(t *
 
 func TestSelectRegionVaultFromSynologyVaults_when_there_is_several_synology_vaults(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	loggers.InitLog(os.Stdout, buffer, buffer, os.Stdout)
+	loggers.InitLog(os.Stdout, buffer, buffer, buffer, os.Stdout)
 	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("region1\nvault1\n")))
 
 	synologyVaults := []*SynologyCoupleVault{
@@ -67,7 +67,7 @@ func TestSelectRegionVaultFromSynologyVaults_when_there_is_several_synology_vaul
 
 func TestSelectRegionVaultFromSynologyVaults_retry_to_give_vault_to_use(t *testing.T) {
 	buffer := new(bytes.Buffer)
-	loggers.InitLog(os.Stdout, buffer, buffer, os.Stdout)
+	loggers.InitLog(os.Stdout, buffer, buffer, buffer, os.Stdout)
 	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("bim\nbam\nregion1\nvault1\n")))
 
 	synologyVaults := []*SynologyCoupleVault{

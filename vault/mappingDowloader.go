@@ -37,7 +37,7 @@ func downloadMappingArchive(restorationContext *awsutils.RestorationContext) {
 	jobId, jobCompleted := checkRetrieveMappingOrStartNewJob(restorationContext, getMappingArchive(restorationContext))
 	if !jobCompleted {
 		awsutils.WaitJobIsCompleted(restorationContext, restorationContext.MappingVault, jobId)
-		loggers.Printf(loggers.Info, "job has finished: %s\n", jobId)
+		loggers.Printf(loggers.OptionalInfo, "job has finished: %s\n", jobId)
 	}
 	start := time.Now()
 	sizeDownloaded := awsutils.DownloadArchiveTo(restorationContext, restorationContext.MappingVault, jobId, restorationContext.GetMappingFilePath())
@@ -46,7 +46,7 @@ func downloadMappingArchive(restorationContext *awsutils.RestorationContext) {
 	restorationContext.RegionVaultCache.MappingArchive = nil
 	restorationContext.RegionVaultCache.MappingVaultRetrieveJobId = ""
 	restorationContext.WriteRegionVaultCache()
-	loggers.Print(loggers.Info, "mapping archive has been downloaded\n")
+	loggers.Print(loggers.OptionalInfo, "mapping archive has been downloaded\n")
 }
 
 func checkRetrieveMappingOrStartNewJob(restorationContext *awsutils.RestorationContext, archive awsutils.Archive) (string, bool) {
@@ -58,7 +58,7 @@ func checkRetrieveMappingOrStartNewJob(restorationContext *awsutils.RestorationC
 		jobCompleted, err = awsutils.JobIsCompleted(restorationContext, restorationContext.MappingVault, restorationContext.RegionVaultCache.MappingVaultRetrieveJobId)
 		if jobCompleted == false {
 			if err == nil {
-				loggers.Printf(loggers.Info, "job to retrieve mapping archive is in progress (can last up to 4 hours): %s\n", jobId)
+				loggers.Printf(loggers.OptionalInfo, "job to retrieve mapping archive is in progress (can last up to 4 hours): %s\n", jobId)
 			} else if strings.Contains(err.Error(), "The job ID was not found") {
 				loggers.Print(loggers.Warning, "retrieve mapping archive job cached was not found\n")
 				jobId = startRetrieveMappingArchiveJob(restorationContext, restorationContext.MappingVault, archive)
@@ -73,11 +73,12 @@ func checkRetrieveMappingOrStartNewJob(restorationContext *awsutils.RestorationC
 }
 
 func startRetrieveMappingArchiveJob(restorationContext *awsutils.RestorationContext, vault string, archive awsutils.Archive) string {
+	DisplayWarnIfNotFreeTier(restorationContext)
 	jobId, _, err := awsutils.StartRetrieveArchiveJob(restorationContext, restorationContext.MappingVault, archive)
 	utils.ExitIfError(err)
 	restorationContext.RegionVaultCache.MappingVaultRetrieveJobId = jobId
 	restorationContext.WriteRegionVaultCache()
-	loggers.Printf(loggers.Info, "job to retrieve mapping archive has started (can last up to 4 hours): %s\n", jobId)
+	loggers.Printf(loggers.OptionalInfo, "job to retrieve mapping archive has started (can last up to 4 hours): %s\n", jobId)
 	return jobId
 }
 
@@ -87,7 +88,7 @@ func getMappingArchive(restorationContext *awsutils.RestorationContext) awsutils
 		jobId, jobCompleted := checkMappingInventoryOrStartNewJob(restorationContext)
 		if jobCompleted == false {
 			awsutils.WaitJobIsCompleted(restorationContext, restorationContext.MappingVault, jobId)
-			loggers.Printf(loggers.Info, "job has finished: %s\n", jobId)
+			loggers.Printf(loggers.OptionalInfo, "job has finished: %s\n", jobId)
 		}
 		restorationContext.RegionVaultCache.MappingVaultInventoryJobId = ""
 		restorationContext.RegionVaultCache.MappingArchive = getMappingArchiveIdFromInventory(restorationContext, jobId)
@@ -106,7 +107,7 @@ func checkMappingInventoryOrStartNewJob(restorationContext *awsutils.Restoration
 		jobCompleted, err = awsutils.JobIsCompleted(restorationContext, restorationContext.MappingVault, jobId)
 		if jobCompleted == false {
 			if err == nil {
-				loggers.Printf(loggers.Info, "job to find mapping archive id is in progress (can last up to 4 hours): %s\n", jobId)
+				loggers.Printf(loggers.OptionalInfo, "job to find mapping archive id is in progress (can last up to 4 hours): %s\n", jobId)
 			} else if strings.Contains(err.Error(), "The job ID was not found") {
 				loggers.Print(loggers.Warning, "inventory job cahed for mapping vaul was not found\n")
 				jobId = inventoryMappingVault(restorationContext)
@@ -122,7 +123,7 @@ func checkMappingInventoryOrStartNewJob(restorationContext *awsutils.Restoration
 
 func inventoryMappingVault(restorationContext *awsutils.RestorationContext) string {
 	jobId := inventoryTowElementsOfMappingVault(restorationContext)
-	loggers.Printf(loggers.Info, "job to find mapping archive id has started (can last up to 4 hours): %s\n", jobId)
+	loggers.Printf(loggers.OptionalInfo, "job to find mapping archive id has started (can last up to 4 hours): %s\n", jobId)
 	restorationContext.RegionVaultCache.MappingVaultInventoryJobId = jobId
 	restorationContext.WriteRegionVaultCache()
 	return jobId

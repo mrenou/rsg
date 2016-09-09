@@ -11,6 +11,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"io/ioutil"
 	"io"
+	"path/filepath"
+	"rsg/utils"
 )
 
 func CommonInitTest() *bytes.Buffer {
@@ -19,13 +21,22 @@ func CommonInitTest() *bytes.Buffer {
 	buffer := new(bytes.Buffer)
 	os.RemoveAll("../../testtmp")
 	os.MkdirAll("../../testtmp/cache", 0700)
-	loggers.InitLog(os.Stdout, buffer, buffer, os.Stderr)
+	loggers.InitLog(os.Stdout, buffer, buffer, buffer, os.Stderr)
 	awsutils.WaitTime = 1 * time.Nanosecond
 	return buffer
 }
 
+func InitTestWithGlacier() (*GlacierMock, *awsutils.RestorationContext) {
+	glacierMock := new(GlacierMock)
+	restorationContext := DefaultRestorationContext(glacierMock)
+	err := os.MkdirAll(filepath.Dir(restorationContext.DestinationDirPath + "/"), 0700)
+	utils.ExitIfError(err)
+	mockGetDataRetrievalPolicy(glacierMock, "accountId", "FreeTier")
+	return glacierMock, restorationContext
+}
+
 func DefaultRestorationContext(glacierMock *GlacierMock) *awsutils.RestorationContext {
-	return &awsutils.RestorationContext{glacierMock, "../../testtmp/cache", "region", "vault", "vault_mapping", "acountId", awsutils.RegionVaultCache{}, "../../testtmp/dest", 0, awsutils.RestorationOptions{}}
+	return &awsutils.RestorationContext{glacierMock, "../../testtmp/cache", "region", "vault", "vault_mapping", "accountId", awsutils.RegionVaultCache{}, "../../testtmp/dest", 0, awsutils.RestorationOptions{}}
 }
 
 type SessionMock struct {
@@ -75,8 +86,27 @@ func (m *GlacierMock) GetJobOutput(input *glacier.GetJobOutputInput) (*glacier.G
 	return getJobOutputOutputCopy, args.Error(1)
 }
 
+func (m *GlacierMock) GetDataRetrievalPolicy(input *glacier.GetDataRetrievalPolicyInput) (*glacier.GetDataRetrievalPolicyOutput, error) {
+	args := m.Called(input)
+	if args.Get(0) != nil {
+		return args.Get(0).(*glacier.GetDataRetrievalPolicyOutput), args.Error(1)
+	}
+	return nil, args.Error(1)
+}
+
 func newReaderClosable(reader io.Reader) ReaderClosable {
 	return ReaderClosable{reader}
+}
+
+func mockGetDataRetrievalPolicy(glacierMock *GlacierMock, accountId, strategy string) *mock.Call {
+	input := &glacier.GetDataRetrievalPolicyInput{
+		AccountId:  &accountId,
+	}
+	out := &glacier.GetDataRetrievalPolicyOutput{
+		Policy: &glacier.DataRetrievalPolicy{Rules: []*glacier.DataRetrievalRule{&glacier.DataRetrievalRule{Strategy: &strategy}}},
+	}
+
+	return glacierMock.On("GetDataRetrievalPolicy", input).Return(out, nil)
 }
 
 

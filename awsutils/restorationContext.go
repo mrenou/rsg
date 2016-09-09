@@ -29,13 +29,14 @@ type RestorationContext struct {
 	RegionVaultCache   RegionVaultCache
 	DestinationDirPath string
 	BytesBySecond      uint64
-	Options	           RestorationOptions
+	Options            RestorationOptions
 }
 
 type RestorationOptions struct {
 	Filters            []string
 	RefreshMappingFile *bool
 	KeepFiles          *bool
+	InfoMessage        bool
 }
 
 type RegionVaultCache struct {
@@ -63,7 +64,10 @@ func CreateRestorationContext(sessionValue *session.Session, accountId, region, 
 		0,
 		RestorationOptions{optionsValue.Filters,
 			optionsValue.RefreshMappingFile,
-			optionsValue.KeepFiles}}
+			optionsValue.KeepFiles,
+			optionsValue.InfoMessage,
+		},
+	}
 }
 
 func ReadRegionVaultCache(region, vault, workingDirPath string) RegionVaultCache {

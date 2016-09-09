@@ -22,7 +22,7 @@ type SynologyCoupleVault struct {
 }
 
 func GetSynologyVaults(accountId string, sessionValue *session.Session, regionFilter, vaultFilter string) ([]*SynologyCoupleVault, error) {
-	loggers.Printf(loggers.Info, "search synology backup vaults...\n")
+	loggers.Printf(loggers.OptionalInfo, "search synology backup vaults...\n")
 	if regionFilter != "" {
 		return getSynologyVaultsOnOneRegions(accountId, sessionValue, regionFilter, vaultFilter)
 	}

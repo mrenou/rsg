@@ -89,11 +89,12 @@ func detectOrSelectDownloadSpeed(restorationContext *awsutils.RestorationContext
 			}
 		}
 	}
-	loggers.Printf(loggers.Info, "download speed used : %v\n", bytefmt.ByteSize(downloadSpeed))
+	loggers.Printf(loggers.OptionalInfo, "download speed used : %v\n", bytefmt.ByteSize(downloadSpeed))
 	return downloadSpeed
 }
 
 func (downloadContext *DownloadContext) downloadArchives() {
+	DisplayWarnIfNotFreeTier(downloadContext.restorationContext)
 	if (downloadContext.maxArchivesRetrievingSize < utils.S_1MB) {
 		utils.ExitIfError(errors.New("max archives retrieving size cannot be less than 1MB"))
 	}
@@ -107,7 +108,7 @@ func (downloadContext *DownloadContext) downloadArchives() {
 	defer archiveRows.Close()
 
 	downloadContext.nbBytesToDownload = GetTotalSize(db, downloadContext.restorationContext.Options.Filters)
-	loggers.Printf(loggers.Info, "%v to restore\n", bytefmt.ByteSize(downloadContext.nbBytesToDownload))
+	loggers.Printf(loggers.OptionalInfo, "%v to restore\n", bytefmt.ByteSize(downloadContext.nbBytesToDownload))
 
 	downloadContext.archivePartRetrieveList = list.New()
 	downloadContext.archivesRetrievingSize = 0

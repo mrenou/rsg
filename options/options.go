@@ -14,6 +14,7 @@ type Options struct {
 	List               bool
 	Region             string
 	Vault              string
+	InfoMessage        bool
 	RefreshMappingFile *bool
 	KeepFiles          *bool
 }
@@ -24,11 +25,12 @@ func ParseOptions() Options {
 	flag.StringVarP(&options.Region, "region", "r", "", "region of the vault to restore")
 	flag.StringVarP(&options.Vault, "vault", "v", "", "vault to restore")
 	flag.BoolVarP(&options.Debug, "debug", "x", false, "display debug info")
-	flag.StringSliceVarP(&options.Filters, "filter", "f", []string{}, "filter files to restore (globals * and ?")
+	flag.StringSliceVarP(&options.Filters, "filter", "f", []string{}, "filter files to restore (globals * and ?)")
 	flag.StringVar(&options.AwsId, "aws-id", "", "id of aws credentials")
 	flag.StringVar(&options.AwsSecret, "aws-secret", "", "secret of aws credentials")
 	flag.StringVarP(&options.Dest, "destination", "d", "", "path to restoration directory")
 	flag.BoolVarP(&options.List, "list", "l", false, "list files")
+	flag.BoolVar(&options.InfoMessage, "info-messages", true, "display information messages")
 	options.RefreshMappingFile = flag.Bool("refresh-mapping-file", false, "enable or disable refresh of mapping file")
 	options.KeepFiles = flag.Bool("keep-files", true, "enable or disable keep existing files")
 	flag.Parse()
@@ -50,23 +52,25 @@ func ParseOptions() Options {
 	}
 
 	loggers.DebugFlag = options.Debug
+	loggers.OptionalInfoFlag = options.InfoMessage
 	loggers.Printf(loggers.Debug, "options aws-id: %v\n", awsIdTruncated)
 	loggers.Printf(loggers.Debug, "options aws-secret: %v\n", awsSecretTruncated)
 	loggers.Printf(loggers.Debug, "options debug: %v\n", options.Debug)
 	loggers.Printf(loggers.Debug, "options destination: %v\n", options.Dest)
 	loggers.Printf(loggers.Debug, "options filters: %v\n", options.Filters)
-	loggers.Printf(loggers.Debug, "options list: %v\n", options.List)
-	loggers.Printf(loggers.Debug, "options region: %v\n", options.Region)
-	loggers.Printf(loggers.Debug, "options vault: %v\n", options.Vault)
-	if options.RefreshMappingFile != nil {
-		loggers.Printf(loggers.Debug, "options refresh-mapping-file: %v\n", *options.RefreshMappingFile)
-	} else {
-		loggers.Print(loggers.Debug, "options refresh-mapping-file: nil\n", )
-	}
 	if options.KeepFiles != nil {
 		loggers.Printf(loggers.Debug, "options keep-files: %v \n", *options.KeepFiles)
 	} else {
 		loggers.Print(loggers.Debug, "options keep-files: nil\n", )
 	}
+	loggers.Printf(loggers.Debug, "options list: %v\n", options.List)
+	loggers.Printf(loggers.Debug, "options info-messages: %v\n", options.InfoMessage)
+	if options.RefreshMappingFile != nil {
+		loggers.Printf(loggers.Debug, "options refresh-mapping-file: %v\n", *options.RefreshMappingFile)
+	} else {
+		loggers.Print(loggers.Debug, "options refresh-mapping-file: nil\n", )
+	}
+	loggers.Printf(loggers.Debug, "options region: %v\n", options.Region)
+	loggers.Printf(loggers.Debug, "options vault: %v\n", options.Vault)
 	return options
 }

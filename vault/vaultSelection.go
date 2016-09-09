@@ -34,7 +34,7 @@ func selectRegionVaultFromSynologyVaults(synologyCoupleVaults []*SynologyCoupleV
 	}
 
 	if synologyCoupleVaultToUse != nil {
-		loggers.Printf(loggers.Info, "synology backup vault used: %s:%s\n", synologyCoupleVaultToUse.Region, synologyCoupleVaultToUse.Name)
+		loggers.Printf(loggers.OptionalInfo, "synology backup vault used: %s:%s\n", synologyCoupleVaultToUse.Region, synologyCoupleVaultToUse.Name)
 		return synologyCoupleVaultToUse.Region, synologyCoupleVaultToUse.Name
 	} else {
 		loggers.Print(loggers.Error, "no synology backup vault found\n")
