@@ -13,6 +13,14 @@ func InitDb(file string) *sql.DB {
 	return db
 }
 
+func GetFiles(db *sql.DB, filters []string) *sql.Rows {
+	where := buildWhereFromFilters(filters)
+	sqlQuery := "SELECT basePath FROM file_info_tb " + where + " ORDER BY basePath"
+	rows, err := db.Query(sqlQuery)
+	utils.ExitIfError(err)
+	return rows
+}
+
 func GetArchives(db *sql.DB, filters []string) *sql.Rows {
 	where := buildWhereFromFilters(filters)
 	sqlQuery := "SELECT DISTINCT archiveId, fileSize FROM file_info_tb " + where + " ORDER BY key"

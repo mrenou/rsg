@@ -15,6 +15,7 @@ type Options struct {
 	debug     bool
 	dest      string
 	filters   []string
+	list      bool
 	region    string
 	vault     string
 }
@@ -30,14 +31,17 @@ func main() {
 	restorationContext := awsutils.CreateRestorationContext(session, accountId, region, vaultName, options.dest)
 	displayWarnIfNotFreeTier(restorationContext)
 	vault.DownloadMappingArchive(restorationContext)
-	err = vault.CheckDestinationDirectory(restorationContext)
-	utils.ExitIfError(err)
-	vault.DownloadArchives(restorationContext)
+	if options.list {
+		vault.ListArchives(restorationContext)
+	} else {
+		err = vault.CheckDestinationDirectory(restorationContext)
+		utils.ExitIfError(err)
+		vault.DownloadArchives(restorationContext)
+	}
 }
 
 func parseOptions() Options {
 	options := Options{}
-
 
 	flag.StringVarP(&options.region, "region", "r", "", "region of the vault to restore")
 	flag.StringVarP(&options.vault, "vault", "v", "", "vault to restore")
@@ -46,6 +50,7 @@ func parseOptions() Options {
 	flag.StringVar(&options.awsId, "aws-id", "", "id of aws credentials")
 	flag.StringVar(&options.awsSecret, "aws-secret", "", "secret of aws credentials")
 	flag.StringVarP(&options.dest, "destination", "d", "", "path to restoration directory")
+	flag.BoolVarP(&options.list, "list", "l", true, "list files")
 	flag.Parse()
 
 	awsIdTruncated := ""
@@ -58,11 +63,12 @@ func parseOptions() Options {
 	}
 
 	loggers.DebugFlag = options.debug
-	loggers.Printf(loggers.Debug, "options aws-id: %v\n",  awsIdTruncated)
+	loggers.Printf(loggers.Debug, "options aws-id: %v\n", awsIdTruncated)
 	loggers.Printf(loggers.Debug, "options aws-secret: %v\n", awsSecretTruncated)
 	loggers.Printf(loggers.Debug, "options debug: %v\n", options.debug)
 	loggers.Printf(loggers.Debug, "options destination: %v \n", options.dest)
 	loggers.Printf(loggers.Debug, "options filters: %v \n", options.filters)
+	loggers.Printf(loggers.Debug, "options list: %v \n", options.list)
 	loggers.Printf(loggers.Debug, "options region: %v \n", options.region)
 	loggers.Printf(loggers.Debug, "options vault: %v \n", options.vault)
 	return options

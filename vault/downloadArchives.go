@@ -67,6 +67,7 @@ func (downloadContext *DownloadContext) archivesRetrievingSizeLeft() uint64 {
 }
 
 func DownloadArchives(restorationContext *awsutils.RestorationContext) {
+	inputs.QueryString("Here We GO ?")
 	downloadContext := new(DownloadContext)
 	downloadContext.restorationContext = restorationContext
 	downloadContext.downloadSpeedAutoUpdate = true
@@ -353,47 +354,3 @@ func downloadArchivePart(restorationContext *awsutils.RestorationContext, archiv
 	archivePartRetrieve.nextByteIndexToWrite += sizeDownloaded
 	return sizeDownloaded, time.Since(start)
 }
-//
-//func (downloadContext *DownloadContext) loadDb() *sql.DB {
-//	db, err := sql.Open("sqlite3", downloadContext.restorationContext.GetMappingFilePath())
-//	utils.ExitIfError(err)
-//	downloadContext.db = db
-//	return db
-//}
-//
-//func (downloadContext *DownloadContext) loadArchives() *sql.Rows {
-//	where := ""
-//	if len(downloadContext.restorationContext.Filters) > 0 {
-//		where = "WHERE "
-//		for i, filter := range downloadContext.restorationContext.Filters {
-//			filter = strings.Replace(filter, "*", "%", -1)
-//			filter = strings.Replace(filter, "?", "_", -1)
-//			if i > 0 {
-//				where += " OR "
-//			}
-//			where += "basepath LIKE '" + filter + "'"
-//		}
-//	}
-//	sqlQuery := "SELECT DISTINCT archiveId, fileSize FROM file_info_tb " + where + " ORDER BY key"
-//	loggers.Printf(loggers.Debug, "query mapping file for archives with %v\n", sqlQuery)
-//	rows, err := downloadContext.db.Query(sqlQuery)
-//	utils.ExitIfError(err)
-//	downloadContext.archiveRows = rows
-//	return rows
-//}
-//
-//func (downloadContext *DownloadContext) loadPaths(archiveId string) *sql.Rows {
-//	stmt, err := downloadContext.db.Prepare("SELECT DISTINCT basePath FROM file_info_tb WHERE archiveId = ?")
-//	utils.ExitIfError(err)
-//	defer stmt.Close()
-//	rows, err := stmt.Query(archiveId)
-//	utils.ExitIfError(err)
-//	return rows
-//}
-//
-//func (downloadContext *DownloadContext) loadTotalSize() {
-//	row := downloadContext.db.QueryRow("SELECT sum(fileSize) FROM file_info_tb")
-//	err := row.Scan(&downloadContext.nbBytesToDownload)
-//	utils.ExitIfError(err)
-//}
-//
