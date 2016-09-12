@@ -12,19 +12,19 @@ import (
 func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) error {
 	for {
 		if restorationContext.DestinationDirPath == "" {
-			restorationContext.DestinationDirPath = inputs.QueryString("what is the destination directory path ?")
+			restorationContext.DestinationDirPath = inputs.QueryString("What is the destination directory path ?")
 		}
-		loggers.Printf(loggers.OptionalInfo, "destination directory path is %v\n", restorationContext.DestinationDirPath)
+		loggers.Printf(loggers.OptionalInfo, "Destination directory path is %v\n", restorationContext.DestinationDirPath)
 		if stat, err := os.Stat(restorationContext.DestinationDirPath); !os.IsNotExist(err) {
 			if !stat.IsDir() {
-				return errors.New(fmt.Sprintf("destination directory is a file: %s", restorationContext.DestinationDirPath))
+				return errors.New(fmt.Sprintf("Destination directory is a file: %s", restorationContext.DestinationDirPath))
 			}
 			if !queryAndUpdateKeepFiles(restorationContext) {
 				os.RemoveAll(restorationContext.DestinationDirPath)
 			}
 		}
 		if err := os.MkdirAll(restorationContext.DestinationDirPath, 0700); err != nil {
-			loggers.Printf(loggers.Error, "cannot create destination directory %s : %v\n", restorationContext.DestinationDirPath, err)
+			loggers.Printf(loggers.Error, "Cannot create destination directory %s : %v\n", restorationContext.DestinationDirPath, err)
 			restorationContext.DestinationDirPath = ""
 		} else {
 			return nil
@@ -34,8 +34,8 @@ func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) 
 
 func queryAndUpdateKeepFiles(restorationContext *awsutils.RestorationContext) bool {
 	for restorationContext.Options.KeepFiles == nil {
-		if !inputs.QueryYesOrNo("destination directory already exists, do you want to keep existing files ?", true) {
-			if inputs.QueryYesOrNo("are you sure, all existing files restored will be deleted ?", false) {
+		if !inputs.QueryYesOrNo("Destination directory already exists, do you want to keep existing files ?", true) {
+			if inputs.QueryYesOrNo("Are you sure, all existing files restored will be deleted ?", false) {
 				tmp := false
 				restorationContext.Options.KeepFiles = &tmp
 			}

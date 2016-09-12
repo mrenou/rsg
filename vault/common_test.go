@@ -16,7 +16,7 @@ import (
 )
 
 func CommonInitTest() *bytes.Buffer {
-	loggers.DebugFlag = true
+	loggers.VerboseFlag = true
 	loggers.InitDefaultLog()
 	buffer := new(bytes.Buffer)
 	os.RemoveAll("../../testtmp")

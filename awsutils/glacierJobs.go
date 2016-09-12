@@ -10,6 +10,9 @@ import (
 	"errors"
 	"io"
 	"os"
+	"io/ioutil"
+	"encoding/json"
+	"code.cloudfoundry.org/bytefmt"
 )
 
 var WaitTime = 5 * time.Minute
@@ -32,7 +35,7 @@ func DescribeJob(restorationContext *RestorationContext, vault, jobId string) (*
 		JobId:     aws.String(jobId),
 		VaultName: aws.String(vault),
 	}
-	loggers.Printf(loggers.Debug, "describe job with params: %v\n", params)
+	loggers.Printf(loggers.Verbose, "Aws call: glacier.DescribeJob(%+v)\n", params)
 	return restorationContext.GlacierClient.DescribeJob(params)
 }
 
@@ -59,7 +62,7 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 		VaultName: aws.String(vault),
 		Range: rangeToRetrieve,
 	}
-	loggers.Printf(loggers.Debug, "get output job with params: %v\n", params)
+	loggers.Printf(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)\n", params)
 	resp, err := restorationContext.GlacierClient.GetJobOutput(params)
 	utils.ExitIfError(err)
 	defer resp.Body.Close()
@@ -67,11 +70,12 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 	file, err = os.OpenFile(destPath, os.O_CREATE | os.O_RDWR, 0600)
 	file.Seek(int64(fromByteToWrite), os.SEEK_SET)
 	utils.ExitIfError(err)
-	loggers.Printf(loggers.Debug, "copy file into: %v\n", destPath)
+	loggers.Printf(loggers.Verbose, "Copy file into: %v\n", destPath)
 	written, err := io.Copy(file, resp.Body)
-	loggers.Printf(loggers.Debug, "%v bytes copied\n", written)
+	written64 := uint64(written)
+	loggers.Printf(loggers.Verbose, "%v copied\n", bytefmt.ByteSize(written64))
 	utils.ExitIfError(err)
-	return uint64(written)
+	return written64
 }
 
 func StartRetrieveArchiveJob(restorationContext *RestorationContext, vault string, archive Archive) (string, uint64, error) {
@@ -81,14 +85,14 @@ func StartRetrieveArchiveJob(restorationContext *RestorationContext, vault strin
 func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vault string, archive Archive, fromByte uint64, sizeToRetrieve uint64) (string, uint64, error) {
 	rangeToRetrieve := ""
 	if (fromByte) % utils.S_1MB != 0 {
-		return "", 0, errors.New("byte start index must be divisible by 1MB")
+		return "", 0, errors.New("Byte start index must be divisible by 1MB")
 	}
 	if (fromByte + sizeToRetrieve >= archive.Size) {
 		sizeToRetrieve = archive.Size - fromByte
 	} else if sizeToRetrieve >= utils.S_1MB {
 		sizeToRetrieve = sizeToRetrieve - (sizeToRetrieve % utils.S_1MB)
 	} else {
-		return "", 0, errors.New("size to retrieve must be divisible by MB")
+		return "", 0, errors.New("Size to retrieve must be divisible by MB")
 	}
 	rangeToRetrieve = strconv.FormatUint(fromByte, 10) + "-" + strconv.FormatUint(fromByte + sizeToRetrieve - 1, 10)
 	params := &glacier.InitiateJobInput{
@@ -96,12 +100,11 @@ func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vaul
 		VaultName: aws.String(vault),
 		JobParameters: &glacier.JobParameters{
 			ArchiveId: aws.String(archive.ArchiveId),
-			//Description: aws.String("restore mapping from " + restorationContext.MappingVault),
 			Type:        aws.String("archive-retrieval"),
 			RetrievalByteRange: aws.String(rangeToRetrieve),
 		},
 	}
-	loggers.Printf(loggers.Debug, "start retrieve archive job with params: %v\n", params)
+	loggers.Printf(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)\n", params)
 	resp, err := restorationContext.GlacierClient.InitiateJob(params)
 	if err != nil {
 		return "", 0, err
@@ -110,10 +113,52 @@ func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vaul
 }
 
 func GetDataRetrievalStrategy(restorationContext *RestorationContext) string {
-	input := &glacier.GetDataRetrievalPolicyInput{
+	params := &glacier.GetDataRetrievalPolicyInput{
 		AccountId:  &restorationContext.AccountId,
 	}
-	output, err := restorationContext.GlacierClient.GetDataRetrievalPolicy(input)
+	loggers.Printf(loggers.Verbose, "Aws call: glacier.GetDataRetrievalPolicy(%v)\n", params)
+	output, err := restorationContext.GlacierClient.GetDataRetrievalPolicy(params)
 	utils.ExitIfError(err)
 	return *output.Policy.Rules[0].Strategy
+}
+
+func InventoryTowElementsOfMappingVault(restorationContext *RestorationContext) string {
+	params := &glacier.InitiateJobInput{
+		AccountId: aws.String(restorationContext.AccountId),
+		VaultName: aws.String(restorationContext.MappingVault),
+		JobParameters: &glacier.JobParameters{
+			Description: aws.String("inventory " + restorationContext.MappingVault),
+			Type:        aws.String("inventory-retrieval"),
+			InventoryRetrievalParameters: &glacier.InventoryRetrievalJobInput{Limit: aws.String("2")},
+		},
+	}
+	loggers.Printf(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)\n", params)
+	resp, err := restorationContext.GlacierClient.InitiateJob(params)
+	utils.ExitIfError(err)
+	return *(resp.JobId)
+}
+
+type VaultInventory struct {
+	ArchiveList []Archive
+}
+
+func GetMappingArchiveIdFromInventory(restorationContext *RestorationContext, jobId string) *Archive {
+	params := &glacier.GetJobOutputInput{
+		AccountId: aws.String(restorationContext.AccountId),
+		JobId:     aws.String(jobId),
+		VaultName: aws.String(restorationContext.MappingVault),
+		Range:     nil,
+	}
+	loggers.Printf(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)\n", params)
+	resp, err := restorationContext.GlacierClient.GetJobOutput(params)
+	utils.ExitIfError(err)
+	defer resp.Body.Close()
+	jsonContent, _ := ioutil.ReadAll(resp.Body)
+	vaultInventory := VaultInventory{}
+	err = json.Unmarshal(jsonContent, &vaultInventory)
+	utils.ExitIfError(err)
+	if (len(vaultInventory.ArchiveList) != 1) {
+		utils.ExitIfError(errors.New("Mapping vault shoud be have only one archive"))
+	}
+	return &vaultInventory.ArchiveList[0]
 }

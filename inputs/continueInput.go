@@ -6,7 +6,7 @@ import (
 )
 
 func QueryContinue() {
-	loggers.Print(loggers.Info, "press to continue...")
+	loggers.Print(loggers.Info, "Press to continue...")
 	_, err := StdinReader.ReadByte()
 	utils.ExitIfError(err)
 }

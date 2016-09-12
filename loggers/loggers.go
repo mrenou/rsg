@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	Debug Level = iota
+	Verbose Level = iota
 	OptionalInfo = iota
 	Info = iota
 	Warning = iota
@@ -17,9 +17,9 @@ const (
 type Level int
 
 var (
-	DebugFlag bool = false
+	VerboseFlag bool = false
 	OptionalInfoFlag bool = true
-	debugWriter io.Writer
+	verboseWriter io.Writer
 	optionalInfoWriter io.Writer
 	infoWriter io.Writer
 	warningWriter io.Writer
@@ -30,8 +30,8 @@ func InitDefaultLog() {
 	InitLog(os.Stdout, os.Stdout, os.Stdout, os.Stdout, os.Stderr)
 }
 
-func InitLog(pDebugWriter, pOptionalInfoWriter, pInfoWriter, pWarningWriter, pErrorWriter io.Writer) {
-	debugWriter = pDebugWriter
+func InitLog(pVerboseWriter, pOptionalInfoWriter, pInfoWriter, pWarningWriter, pErrorWriter io.Writer) {
+	verboseWriter = pVerboseWriter
 	optionalInfoWriter = pOptionalInfoWriter
 	infoWriter = pInfoWriter
 	warningWriter = pWarningWriter
@@ -48,12 +48,11 @@ func Print(level Level, v ...interface{}) {
 
 func print(level Level, toPrint string) {
 	var writer io.Writer;
-	if level == Debug {
-		if DebugFlag == false {
+	if level == Verbose {
+		if VerboseFlag == false {
 			return
 		}
-		writer = debugWriter
-		toPrint = "DEBUG: " + toPrint;
+		writer = verboseWriter
 	}
 	if level == OptionalInfo {
 		if OptionalInfoFlag == false {

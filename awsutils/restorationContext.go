@@ -83,7 +83,7 @@ func ReadRegionVaultCache(region, vault, workingDirPath string) RegionVaultCache
 }
 
 func (restorationContext *RestorationContext) WriteRegionVaultCache() {
-	loggers.Printf(loggers.Debug, "write cache %v\n", restorationContext.RegionVaultCache)
+	loggers.Printf(loggers.Verbose, "Write cache\n")
 	bytes, err := json.Marshal(restorationContext.RegionVaultCache)
 	utils.ExitIfError(err)
 	err = ioutil.WriteFile(restorationContext.WorkingDirPath + "/cache.json", bytes, 0700)

@@ -27,7 +27,7 @@ func TestCheckDestination_dest_is_not_defined(t *testing.T) {
 		assert.Fail(t, "../../testtmp/dest directory should exist")
 	}
 
-	assert.Equal(t, "what is the destination directory path ? destination directory path is ../../testtmp/dest\n", string(buffer.Bytes()))
+	assert.Equal(t, "What is the destination directory path ? Destination directory path is ../../testtmp/dest\n", string(buffer.Bytes()))
 }
 
 func TestCheckDestination_dest_not_exist(t *testing.T) {
@@ -44,7 +44,7 @@ func TestCheckDestination_dest_not_exist(t *testing.T) {
 	} else {
 		assert.Fail(t, "../../testtmp/dest directory should exist")
 	}
-	assert.Equal(t, "destination directory path is ../../testtmp/dest\n", string(buffer.Bytes()))
+	assert.Equal(t, "Destination directory path is ../../testtmp/dest\n", string(buffer.Bytes()))
 }
 
 func TestCheckDestination_answer_no_but_not_confirm_first_when_dest_already_exist(t *testing.T) {
@@ -62,7 +62,7 @@ func TestCheckDestination_answer_no_but_not_confirm_first_when_dest_already_exis
 		assert.Fail(t, "../../testtmp/dest/data directory should exist")
 	}
 
-	assert.Equal(t, "destination directory path is ../../testtmp/dest\ndestination directory already exists, do you want to keep existing files ?[Y/n] are you sure, all existing files restored will be deleted ?[y/N] destination directory already exists, do you want to keep existing files ?[Y/n] ", string(buffer.Bytes()))
+	assert.Equal(t, "Destination directory path is ../../testtmp/dest\nDestination directory already exists, do you want to keep existing files ?[Y/n] Are you sure, all existing files restored will be deleted ?[y/N] Destination directory already exists, do you want to keep existing files ?[Y/n] ", string(buffer.Bytes()))
 }
 
 func TestCheckDestination_answer_no_and_confirm_when_dest_already_exist(t *testing.T) {
@@ -80,7 +80,7 @@ func TestCheckDestination_answer_no_and_confirm_when_dest_already_exist(t *testi
 		assert.Fail(t, "../../testtmp/dest/data directory should not exist")
 	}
 
-	assert.Equal(t, "destination directory path is ../../testtmp/dest\ndestination directory already exists, do you want to keep existing files ?[Y/n] are you sure, all existing files restored will be deleted ?[y/N] ", string(buffer.Bytes()))
+	assert.Equal(t, "Destination directory path is ../../testtmp/dest\nDestination directory already exists, do you want to keep existing files ?[Y/n] Are you sure, all existing files restored will be deleted ?[y/N] ", string(buffer.Bytes()))
 }
 
 func TestCheckDestination_answer_yes_when_dest_already_exist(t *testing.T) {
@@ -98,6 +98,6 @@ func TestCheckDestination_answer_yes_when_dest_already_exist(t *testing.T) {
 		assert.Fail(t, "../../testtmp/dest/data directory should exist")
 	}
 
-	assert.Equal(t, "destination directory path is ../../testtmp/dest\ndestination directory already exists, do you want to keep existing files ?[Y/n] ", string(buffer.Bytes()))
+	assert.Equal(t, "Destination directory path is ../../testtmp/dest\nDestination directory already exists, do you want to keep existing files ?[Y/n] ", string(buffer.Bytes()))
 }
 
