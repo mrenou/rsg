@@ -19,6 +19,7 @@ func main() {
 	region, vaultName := vault.SelectRegionVault(accountId, session, options.Region, options.Vault)
 	restorationContext := awsutils.CreateRestorationContext(session, accountId, region, vaultName, options)
 	vault.DownloadMappingArchive(restorationContext)
+	vault.QueryFiltersIfNecessary(restorationContext, options)
 	if options.List {
 		vault.ListArchives(restorationContext)
 	} else {
