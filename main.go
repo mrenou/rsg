@@ -6,7 +6,6 @@ import (
 	"rsg/awsutils"
 	"rsg/utils"
 	"rsg/options"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func main() {

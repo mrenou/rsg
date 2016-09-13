@@ -53,24 +53,24 @@ func ParseOptions() Options {
 
 	loggers.VerboseFlag = options.Verbose
 	loggers.OptionalInfoFlag = options.InfoMessage
-	loggers.Printf(loggers.Verbose, "Options aws-id: %v\n", awsIdTruncated)
-	loggers.Printf(loggers.Verbose, "Options aws-secret: %v\n", awsSecretTruncated)
-	loggers.Printf(loggers.Verbose, "Options destination: %v\n", options.Dest)
-	loggers.Printf(loggers.Verbose, "Options filters: %v\n", options.Filters)
+	loggers.Printfln(loggers.Verbose, "Options aws-id: %v", awsIdTruncated)
+	loggers.Printfln(loggers.Verbose, "Options aws-secret: %v", awsSecretTruncated)
+	loggers.Printfln(loggers.Verbose, "Options destination: %v", options.Dest)
+	loggers.Printfln(loggers.Verbose, "Options filters: %v", options.Filters)
 	if options.KeepFiles != nil {
-		loggers.Printf(loggers.Verbose, "Options keep-files: %v \n", *options.KeepFiles)
+		loggers.Printfln(loggers.Verbose, "Options keep-files: %v ", *options.KeepFiles)
 	} else {
-		loggers.Print(loggers.Verbose, "Options keep-files: nil\n", )
+		loggers.Println(loggers.Verbose, "Options keep-files: nil", )
 	}
-	loggers.Printf(loggers.Verbose, "Options list: %v\n", options.List)
-	loggers.Printf(loggers.Verbose, "Options info-messages: %v\n", options.InfoMessage)
+	loggers.Printfln(loggers.Verbose, "Options list: %v", options.List)
+	loggers.Printfln(loggers.Verbose, "Options info-messages: %v", options.InfoMessage)
 	if options.RefreshMappingFile != nil {
-		loggers.Printf(loggers.Verbose, "Options refresh-mapping-file: %v\n", *options.RefreshMappingFile)
+		loggers.Printfln(loggers.Verbose, "Options refresh-mapping-file: %v", *options.RefreshMappingFile)
 	} else {
-		loggers.Print(loggers.Verbose, "Options refresh-mapping-file: nil\n", )
+		loggers.Println(loggers.Verbose, "Options refresh-mapping-file: nil", )
 	}
-	loggers.Printf(loggers.Verbose, "Options region: %v\n", options.Region)
-	loggers.Printf(loggers.Verbose, "Options vault: %v\n", options.Vault)
-	loggers.Printf(loggers.Verbose, "Options verbose: %v\n", options.Verbose)
+	loggers.Printfln(loggers.Verbose, "Options region: %v", options.Region)
+	loggers.Printfln(loggers.Verbose, "Options vault: %v", options.Vault)
+	loggers.Printfln(loggers.Verbose, "Options verbose: %v", options.Verbose)
 	return options
 }

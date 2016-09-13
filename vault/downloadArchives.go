@@ -7,7 +7,6 @@ import (
 	"rsg/awsutils"
 	"rsg/loggers"
 	"container/list"
-	_ "github.com/mattn/go-sqlite3"
 	"path/filepath"
 	"errors"
 	"time"
@@ -81,15 +80,15 @@ func DownloadArchives(restorationContext *awsutils.RestorationContext) {
 func detectOrSelectDownloadSpeed(restorationContext *awsutils.RestorationContext) uint64 {
 	downloadSpeed, err := speedtest.SpeedTest()
 	if err != nil {
-		loggers.Printf(loggers.Error, "Cannot test download speed : %v\n", err)
+		loggers.Printfln(loggers.Error, "Cannot test download speed : %v", err)
 		for downloadSpeed == 0 || err != nil {
 			downloadSpeed, err = bytefmt.ToBytes(inputs.QueryString("Select your download speed by second (ex 10K, 256K, 1M, 10M):"))
 			if err != nil {
-				loggers.Printf(loggers.Error, "%v\n", err)
+				loggers.Printfln(loggers.Error, "%v", err)
 			}
 		}
 	}
-	loggers.Printf(loggers.OptionalInfo, "Download speed used : %v\n", bytefmt.ByteSize(downloadSpeed))
+	loggers.Printfln(loggers.OptionalInfo, "Download speed used : %v", bytefmt.ByteSize(downloadSpeed))
 	return downloadSpeed
 }
 
@@ -108,7 +107,7 @@ func (downloadContext *DownloadContext) downloadArchives() {
 	defer archiveRows.Close()
 
 	downloadContext.nbBytesToDownload = GetTotalSize(db, downloadContext.restorationContext.Options.Filters)
-	loggers.Printf(loggers.OptionalInfo, "%v to restore\n", bytefmt.ByteSize(downloadContext.nbBytesToDownload))
+	loggers.Printfln(loggers.OptionalInfo, "%v to restore", bytefmt.ByteSize(downloadContext.nbBytesToDownload))
 
 	downloadContext.archivePartRetrieveList = list.New()
 	downloadContext.archivesRetrievingSize = 0
@@ -155,7 +154,7 @@ func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetr
 
 			if !downloadContext.checkAllFilesOfArchiveExists(archiveId) {
 				if stat, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + archiveId); !os.IsNotExist(err) {
-					loggers.Printf(loggers.Verbose, "Loacal archive found: %v  \n", archiveId)
+					loggers.Printfln(loggers.Verbose, "Loacal archive found: %v", archiveId)
 					if !downloadContext.handleArchiveFileDownloadCompletion(archiveId, fileSize) {
 						archiveToRetrieve = &archiveRetrieve{archiveId, fileSize, uint64(stat.Size()) - (uint64(stat.Size()) % utils.S_1MB)}
 					}
@@ -175,9 +174,9 @@ func (downloadContext *DownloadContext) checkAllFilesOfArchiveExists(archiveId s
 		pathRows.Scan(&path)
 
 		if utils.Exists(downloadContext.restorationContext.DestinationDirPath + "/" + path) {
-			loggers.Printf(loggers.Verbose, "Skip existing file %s\n", downloadContext.restorationContext.DestinationDirPath + "/" + path)
+			loggers.Printfln(loggers.Verbose, "Skip existing file %s", downloadContext.restorationContext.DestinationDirPath + "/" + path)
 		} else {
-			loggers.Printf(loggers.Verbose, "File not found: %v/%v  \n", downloadContext.restorationContext.DestinationDirPath, path)
+			loggers.Printfln(loggers.Verbose, "File not found: %v/%v", downloadContext.restorationContext.DestinationDirPath, path)
 			return false
 
 		}
@@ -200,7 +199,7 @@ func (downloadContext *DownloadContext) startArchivePartRetrieveJob(archiveToRet
 	sizeToRetrieve, isEndOfFile := downloadContext.computeSizeToRetrieve(downloadContext.uncompletedRetrieve)
 	if (isEndOfFile || sizeToRetrieve / utils.S_1MB > 0) {
 		if success, jobId, sizeRetrieved := downloadContext.retryArchivePartRetrieveJob(archiveToRetrieve, sizeToRetrieve); success {
-			loggers.Printf(loggers.Verbose, "Job has started for archive id %s to retrieve %v from %v byte index\n",
+			loggers.Printfln(loggers.Verbose, "Job has started for archive id %s to retrieve %v from %v byte index",
 				archiveToRetrieve.archiveId,
 				bytefmt.ByteSize(sizeRetrieved),
 				archiveToRetrieve.nextByteIndexToRetrieve)
@@ -242,7 +241,7 @@ func (downloadContext *DownloadContext) retryArchivePartRetrieveJob(archiveToRet
 
 func (downloadContext *DownloadContext) handleArchiveRetrieveCompletion(archiveToRetrieve *archiveRetrieve) {
 	if archiveToRetrieve.retrieveIsComplete() {
-		loggers.Printf(loggers.Verbose, "Archive id %s has been completed retrieved\n", archiveToRetrieve.archiveId)
+		loggers.Printfln(loggers.Verbose, "Archive id %s has been completed retrieved", archiveToRetrieve.archiveId)
 		downloadContext.uncompletedRetrieve = nil
 	}
 }
@@ -273,7 +272,7 @@ func (downloadContext *DownloadContext) downloadArchivesPartWhenReady() {
 
 func (downloadContext *DownloadContext) displayStatus(phase string) {
 	if (loggers.VerboseFlag) {
-		loggers.Printf(loggers.Info, "%-30s %02v%% restored\n", "(" + phase + ")", downloadContext.nbBytesDownloaded * 100 / downloadContext.nbBytesToDownload)
+		loggers.Printfln(loggers.Info, "%-30s %02v%% restored", "(" + phase + ")", downloadContext.nbBytesDownloaded * 100 / downloadContext.nbBytesToDownload)
 	} else {
 		loggers.Printf(loggers.Info, "\r%-30s %02v%% restored", "(" + phase + ")", downloadContext.nbBytesDownloaded * 100 / downloadContext.nbBytesToDownload)
 	}
@@ -285,7 +284,7 @@ func (downloadContext *DownloadContext) updateDownloadSpeed(downloadedSize uint6
 		if (downloadContext.bytesBySecond == 0) {
 			downloadContext.bytesBySecond = 1
 		}
-		loggers.Printf(loggers.Verbose, "New download speed: %v/s\n", bytefmt.ByteSize(downloadContext.bytesBySecond))
+		loggers.Printfln(loggers.Verbose, "New download speed: %v/s", bytefmt.ByteSize(downloadContext.bytesBySecond))
 	}
 }
 
@@ -304,7 +303,7 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(arch
 	stat, err := file.Stat()
 	utils.ExitIfError(err)
 	if uint64(stat.Size()) >= size {
-		loggers.Printf(loggers.Verbose, "Archive %v downloaded\n", archiveId)
+		loggers.Printfln(loggers.Verbose, "Archive %v downloaded", archiveId)
 
 		pathRows := GetPaths(downloadContext.db, archiveId)
 		defer pathRows.Close()
@@ -319,7 +318,7 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(arch
 				err := os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
 				utils.ExitIfError(err)
 				utils.CopyFile(destinationDirPath + "/" + previousPath, destinationDirPath + "/" + archiveId)
-				loggers.Printf(loggers.Verbose, "File %v restored (copy from %v)\n", destinationDirPath + "/" + previousPath, archiveId)
+				loggers.Printfln(loggers.Verbose, "File %v restored (copy from %v)", destinationDirPath + "/" + previousPath, archiveId)
 			}
 			previousPath = path;
 		}
@@ -327,7 +326,7 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(arch
 			err := os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
 			utils.ExitIfError(err)
 			os.Rename(destinationDirPath + "/" + archiveId, destinationDirPath + "/" + previousPath)
-			loggers.Printf(loggers.Verbose, "File %v restored (rename from %v)\n", destinationDirPath + "/" + previousPath, archiveId)
+			loggers.Printfln(loggers.Verbose, "File %v restored (rename from %v)", destinationDirPath + "/" + previousPath, archiveId)
 		}
 		return true
 	}

@@ -4,6 +4,7 @@ import (
 	"strings"
 	"rsg/loggers"
 	"rsg/utils"
+	"rsg/consts"
 )
 
 func QueryYesOrNo(query string, defaultAnswer bool) bool {
@@ -16,10 +17,10 @@ func QueryYesOrNo(query string, defaultAnswer bool) bool {
 			no = strings.ToUpper(no)
 		}
 		loggers.Printf(loggers.Info, "%s[%s/%s] ", query, yes, no)
-		resp, err := StdinReader.ReadString('\n')
+		resp, err := StdinReader.ReadString(consts.LINE_BREAK_LAST_CHAR)
 		utils.ExitIfError(err)
 		resp = strings.TrimSpace(resp)
-		resp = strings.TrimSuffix(resp, "\n")
+		resp = strings.TrimSuffix(resp, consts.LINE_BREAK)
 		resp = strings.ToLower(resp)
 		switch resp {
 		case "y":

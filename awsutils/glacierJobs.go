@@ -35,7 +35,7 @@ func DescribeJob(restorationContext *RestorationContext, vault, jobId string) (*
 		JobId:     aws.String(jobId),
 		VaultName: aws.String(vault),
 	}
-	loggers.Printf(loggers.Verbose, "Aws call: glacier.DescribeJob(%+v)\n", params)
+	loggers.Printfln(loggers.Verbose, "Aws call: glacier.DescribeJob(%+v)", params)
 	return restorationContext.GlacierClient.DescribeJob(params)
 }
 
@@ -62,7 +62,7 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 		VaultName: aws.String(vault),
 		Range: rangeToRetrieve,
 	}
-	loggers.Printf(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)\n", params)
+	loggers.Printfln(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)", params)
 	resp, err := restorationContext.GlacierClient.GetJobOutput(params)
 	utils.ExitIfError(err)
 	defer resp.Body.Close()
@@ -70,10 +70,10 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 	file, err = os.OpenFile(destPath, os.O_CREATE | os.O_RDWR, 0600)
 	file.Seek(int64(fromByteToWrite), os.SEEK_SET)
 	utils.ExitIfError(err)
-	loggers.Printf(loggers.Verbose, "Copy file into: %v\n", destPath)
+	loggers.Printfln(loggers.Verbose, "Copy file into: %v", destPath)
 	written, err := io.Copy(file, resp.Body)
 	written64 := uint64(written)
-	loggers.Printf(loggers.Verbose, "%v copied\n", bytefmt.ByteSize(written64))
+	loggers.Printfln(loggers.Verbose, "%v copied", bytefmt.ByteSize(written64))
 	utils.ExitIfError(err)
 	return written64
 }
@@ -104,7 +104,7 @@ func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vaul
 			RetrievalByteRange: aws.String(rangeToRetrieve),
 		},
 	}
-	loggers.Printf(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)\n", params)
+	loggers.Printfln(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)", params)
 	resp, err := restorationContext.GlacierClient.InitiateJob(params)
 	if err != nil {
 		return "", 0, err
@@ -116,7 +116,7 @@ func GetDataRetrievalStrategy(restorationContext *RestorationContext) string {
 	params := &glacier.GetDataRetrievalPolicyInput{
 		AccountId:  &restorationContext.AccountId,
 	}
-	loggers.Printf(loggers.Verbose, "Aws call: glacier.GetDataRetrievalPolicy(%v)\n", params)
+	loggers.Printfln(loggers.Verbose, "Aws call: glacier.GetDataRetrievalPolicy(%v)", params)
 	output, err := restorationContext.GlacierClient.GetDataRetrievalPolicy(params)
 	utils.ExitIfError(err)
 	return *output.Policy.Rules[0].Strategy
@@ -132,7 +132,7 @@ func InventoryTowElementsOfMappingVault(restorationContext *RestorationContext) 
 			InventoryRetrievalParameters: &glacier.InventoryRetrievalJobInput{Limit: aws.String("2")},
 		},
 	}
-	loggers.Printf(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)\n", params)
+	loggers.Printfln(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)", params)
 	resp, err := restorationContext.GlacierClient.InitiateJob(params)
 	utils.ExitIfError(err)
 	return *(resp.JobId)
@@ -149,7 +149,7 @@ func GetMappingArchiveIdFromInventory(restorationContext *RestorationContext, jo
 		VaultName: aws.String(restorationContext.MappingVault),
 		Range:     nil,
 	}
-	loggers.Printf(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)\n", params)
+	loggers.Printfln(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)", params)
 	resp, err := restorationContext.GlacierClient.GetJobOutput(params)
 	utils.ExitIfError(err)
 	defer resp.Body.Close()

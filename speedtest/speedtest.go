@@ -23,7 +23,7 @@ func SpeedTest() (uint64, error) {
 	if len(submatches) > 1 {
 		link := submatches[1]
 		if link != "" {
-			loggers.Printf(loggers.Verbose, "Start download speed test on %v\n", link)
+			loggers.Printfln(loggers.Verbose, "Start download speed test on %v", link)
 			resp, err = http.Get(link)
 			if err != nil {
 				return 0, err

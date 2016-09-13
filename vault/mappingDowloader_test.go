@@ -15,6 +15,7 @@ import (
 	"bufio"
 	"regexp"
 	"strings"
+	"rsg/consts"
 )
 
 func mockStartMappingJobInventory(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext) *mock.Call {
@@ -110,11 +111,11 @@ func TestDownloadMappingArchive_download_mapping_first_time(t *testing.T) {
 	assertMappingArchive(t, "hello !")
 	assertCacheIsEmpty(t)
 
-	assert.Equal(t, "Job to find mapping archive id has started (can last up to 4 hours): inventoryMappingJobId\n" +
-	"Job has finished: inventoryMappingJobId\n" +
-	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId\n" +
-	"Job has finished: retrieveMappingJobId\n" +
-	"Mapping archive has been downloaded\n", string(buffer.Bytes()))
+	assert.Equal(t, "Job to find mapping archive id has started (can last up to 4 hours): inventoryMappingJobId" + consts.LINE_BREAK +
+	"Job has finished: inventoryMappingJobId" + consts.LINE_BREAK +
+	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_job_in_progress(t *testing.T) {
@@ -137,11 +138,11 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_in_progress(
 	assertMappingArchive(t, "hello !")
 	assertCacheIsEmpty(t)
 
-	assert.Equal(t, "Job to find mapping archive id is in progress (can last up to 4 hours): inventoryMappingJobId\n" +
-	"Job has finished: inventoryMappingJobId\n" +
-	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId\n" +
-	"Job has finished: retrieveMappingJobId\n" +
-	"Mapping archive has been downloaded\n", string(buffer.Bytes()))
+	assert.Equal(t, "Job to find mapping archive id is in progress (can last up to 4 hours): inventoryMappingJobId" + consts.LINE_BREAK +
+	"Job has finished: inventoryMappingJobId" + consts.LINE_BREAK +
+	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_job_deprecated(t *testing.T) {
@@ -165,12 +166,12 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_deprecated(t
 	assertMappingArchive(t, "hello !")
 	assertCacheIsEmpty(t)
 
-	assert.Equal(t, "WARNING: Inventory job cahed for mapping vaul was not found\n" +
-	"Job to find mapping archive id has started (can last up to 4 hours): inventoryMappingJobId\n" +
-	"Job has finished: inventoryMappingJobId\n" +
-	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId\n" +
-	"Job has finished: retrieveMappingJobId\n" +
-	"Mapping archive has been downloaded\n", string(buffer.Bytes()))
+	assert.Equal(t, "WARNING: Inventory job cahed for mapping vaul was not found" + consts.LINE_BREAK +
+	"Job to find mapping archive id has started (can last up to 4 hours): inventoryMappingJobId" + consts.LINE_BREAK +
+	"Job has finished: inventoryMappingJobId" + consts.LINE_BREAK +
+	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_done(t *testing.T) {
@@ -192,9 +193,9 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_done(t *testing.
 	assertMappingArchive(t, "hello !")
 	assertCacheIsEmpty(t)
 
-	assert.Equal(t, "Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId\n" +
-	"Job has finished: retrieveMappingJobId\n" +
-	"Mapping archive has been downloaded\n", string(buffer.Bytes()))
+	assert.Equal(t, "Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_job_in_progress(t *testing.T) {
@@ -214,9 +215,9 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_job_in_progress(t
 	assertMappingArchive(t, "hello !")
 	assertCacheIsEmpty(t)
 
-	assert.Equal(t, "Job to retrieve mapping archive is in progress (can last up to 4 hours): retrieveMappingJobId\n" +
-	"Job has finished: retrieveMappingJobId\n" +
-	"Mapping archive has been downloaded\n", string(buffer.Bytes()))
+	assert.Equal(t, "Job to retrieve mapping archive is in progress (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_job_deprecated(t *testing.T) {
@@ -237,10 +238,10 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_job_deprecated(t 
 	assertMappingArchive(t, "hello !")
 	assertCacheIsEmpty(t)
 
-	assert.Equal(t, "WARNING: Retrieve mapping archive job cached was not found\n" +
-	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId\n" +
-	"Job has finished: retrieveMappingJobId\n" +
-	"Mapping archive has been downloaded\n", string(buffer.Bytes()))
+	assert.Equal(t, "WARNING: Retrieve mapping archive job cached was not found" + consts.LINE_BREAK +
+	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_done(t *testing.T) {
@@ -259,7 +260,7 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_done(t *testing.T
 	assertMappingArchive(t, "hello !")
 	assertCacheIsEmpty(t)
 
-	assert.Equal(t, "Mapping archive has been downloaded\n", string(buffer.Bytes()))
+	assert.Equal(t, "Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists(t *testing.T) {
@@ -271,7 +272,7 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists(t *
 
 	ioutil.WriteFile("../../testtmp/cache/mapping.sqllite", []byte("hello !"), 0600)
 
-	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("\n")))
+	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte(consts.LINE_BREAK)))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -293,7 +294,7 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but
 
 	ioutil.WriteFile("../../testtmp/cache/mapping.sqllite", []byte("hello !"), 0600)
 
-	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("y\n")))
+	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("y" + consts.LINE_BREAK)))
 
 	mockStartMappingJobInventory(glacierMock, restorationContext)
 	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
@@ -309,7 +310,7 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but
 	assertMappingArchive(t, "hello !")
 	assertCacheIsEmpty(t)
 
-	outputs := strings.Split(string(buffer.Bytes()), "\n")
+	outputs := strings.Split(string(buffer.Bytes()), consts.LINE_BREAK)
 
 	assert.True(t, regexp.MustCompile("Local mapping archive already exists with last modification date .+, retrieve a new mapping file \\?\\[y/N\\] Job to find mapping archive id has started \\(can last up to 4 hours\\): inventoryMappingJobId").MatchString(outputs[0]))
 	assert.Equal(t, "Job has finished: inventoryMappingJobId", outputs[1])

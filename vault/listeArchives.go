@@ -3,7 +3,6 @@ package vault
 import (
 	"rsg/awsutils"
 	"rsg/loggers"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 func ListArchives(restorationContext *awsutils.RestorationContext) {
@@ -16,6 +15,6 @@ func ListArchives(restorationContext *awsutils.RestorationContext) {
 	for archiveRows.Next() {
 		var basePath string
 		archiveRows.Scan(&basePath)
-		loggers.Printf(loggers.Info, "%v\n", basePath)
+		loggers.Printfln(loggers.Info, "%v", basePath)
 	}
 }

@@ -4,7 +4,6 @@ import (
 	"testing"
 	"rsg/awsutils"
 	"database/sql"
-	_ "github.com/mattn/go-sqlite3"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"bytes"

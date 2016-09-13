@@ -10,7 +10,7 @@ import (
 func GetAccountId(sessionValue *session.Session) (string, error) {
 	svc := iam.New(sessionValue)
 	params := &iam.GetUserInput{}
-	loggers.Printf(loggers.Verbose, "Aws call: svc.GetUser(%+v)\n", params)
+	loggers.Printfln(loggers.Verbose, "Aws call: svc.GetUser(%+v)", params)
 	resp, err := svc.GetUser(params)
 	if err != nil {
 		return "", err

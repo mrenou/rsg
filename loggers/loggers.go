@@ -4,6 +4,7 @@ import (
 	"os"
 	"io"
 	"fmt"
+	"rsg/consts"
 )
 
 const (
@@ -38,10 +39,17 @@ func InitLog(pVerboseWriter, pOptionalInfoWriter, pInfoWriter, pWarningWriter, p
 	errorWriter = pErrorWriter
 }
 
+func Printfln(level Level, format string, v ...interface{}) {
+	print(level, fmt.Sprintf(format, v...) + consts.LINE_BREAK)
+}
+
 func Printf(level Level, format string, v ...interface{}) {
 	print(level, fmt.Sprintf(format, v...))
 }
 
+func Println(level Level, v ...interface{}) {
+	print(level, fmt.Sprint(v...) + consts.LINE_BREAK)
+}
 func Print(level Level, v ...interface{}) {
 	print(level, fmt.Sprint(v...))
 }

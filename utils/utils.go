@@ -13,7 +13,7 @@ const S_1GB = 1024 * S_1MB
 
 func ExitIfError(err error) {
 	if (err != nil) {
-		loggers.Printf(loggers.Error, "%v\n", translateAwsErrors(err))
+		loggers.Printfln(loggers.Error, "%v", translateAwsErrors(err))
 		os.Exit(1)
 	}
 }
@@ -63,5 +63,4 @@ func Exists(path string) bool {
 		return true
 	}
 }
-
 
