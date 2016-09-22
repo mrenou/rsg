@@ -162,10 +162,12 @@ func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetr
 
 			if !downloadContext.checkAllFilesOfArchiveExists(archiveId) {
 				if stat, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + archiveId); !os.IsNotExist(err) {
-					loggers.Printfln(loggers.Verbose, "Loacal archive found: %v", archiveId)
+					loggers.Printfln(loggers.Verbose, "Local archive found: %v", archiveId)
 					if !downloadContext.handleArchiveFileDownloadCompletion(archiveId, fileSize) {
 						archiveToRetrieve = &archiveRetrieve{archiveId, fileSize, uint64(stat.Size()) - (uint64(stat.Size()) % utils.S_1MB)}
 					}
+				} else if fileSize == 0 {
+					downloadContext.createFilesForEmptyArchive(archiveId)
 				} else {
 					archiveToRetrieve = &archiveRetrieve{archiveId, fileSize, 0}
 				}
@@ -191,6 +193,23 @@ func (downloadContext *DownloadContext) checkAllFilesOfArchiveExists(archiveId s
 	}
 	pathRows.Close()
 	return true
+}
+
+func (downloadContext *DownloadContext) createFilesForEmptyArchive(archiveId string) {
+	pathRows := GetPaths(downloadContext.db, archiveId)
+	for pathRows.Next() {
+		var path string
+		pathRows.Scan(&path)
+		if !utils.Exists(downloadContext.restorationContext.DestinationDirPath + "/"+ path) {
+			err := os.MkdirAll(filepath.Dir(downloadContext.restorationContext.DestinationDirPath + "/"+ path), 0700)
+			utils.ExitIfError(err)
+			file, err := os.Create(downloadContext.restorationContext.DestinationDirPath + "/"+ path)
+			utils.ExitIfError(err)
+			err = file.Close()
+			utils.ExitIfError(err)
+		}
+	}
+	pathRows.Close()
 }
 
 func (downloadContext *DownloadContext) computeSizeToRetrieve(archiveToRetrieve *archiveRetrieve) (uint64, bool) {
@@ -285,10 +304,14 @@ func (downloadContext *DownloadContext) downloadArchivesPartWhenReady() {
 }
 
 func (downloadContext *DownloadContext) displayStatus(phase string) {
+	restored := uint64(0)
+	if downloadContext.nbBytesToDownload != 0 {
+		restored = downloadContext.nbBytesDownloaded * 100 / downloadContext.nbBytesToDownload
+	}
 	if (loggers.VerboseFlag) {
-		loggers.Printfln(loggers.Info, "%-30s %02v%% restored", "(" + phase + ")", downloadContext.nbBytesDownloaded * 100 / downloadContext.nbBytesToDownload)
+		loggers.Printfln(loggers.Info, "%-30s %02v%% restored", "(" + phase + ")", restored)
 	} else {
-		loggers.Printf(loggers.Info, "\r%-30s %02v%% restored", "(" + phase + ")", downloadContext.nbBytesDownloaded * 100 / downloadContext.nbBytesToDownload)
+		loggers.Printf(loggers.Info, "\r%-30s %02v%% restored", "(" + phase + ")", restored)
 	}
 }
 

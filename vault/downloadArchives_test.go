@@ -494,6 +494,37 @@ func TestDownloadArchives_retrieve_when_archive_is_not_found(t *testing.T) {
 	assertFileContent(t, "../../testtmp/dest/data/folder/file3.txt", "3")
 }
 
+func TestDownloadArchives_retrieve_empty_file(t *testing.T) {
+	// Given
+	CommonInitTest()
+	_, restorationContext := InitTestWithGlacier()
+	downloadContext := DownloadContext{
+		restorationContext: restorationContext,
+		bytesBySecond: 3496, // 1048800 on 5 min
+		maxArchivesRetrievingSize: utils.S_1MB * 2,
+		downloadSpeedAutoUpdate: false,
+		archivesRetrievingSize: 0,
+		archivePartRetrieveListMaxSize: 10,
+		archivePartRetrieveList: nil,
+		hasArchiveRows: false,
+		db: nil,
+		archiveRows:nil,
+	}
+
+	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
+	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'GlacierZeroSizeFile', 0);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file2.txt', 'GlacierZeroSizeFile', 0);")
+	db.Close()
+
+	// When
+	downloadContext.downloadArchives()
+
+	// Then
+	assertFileContent(t, "../../testtmp/dest/data/folder/file1.txt", "")
+	assertFileContent(t, "../../testtmp/dest/data/folder/file2.txt", "")
+}
+
 func assertFileContent(t *testing.T, filePath, expected string) {
 	data, _ := ioutil.ReadFile(filePath)
 	assert.Equal(t, expected, string(data))
