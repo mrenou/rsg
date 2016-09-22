@@ -36,7 +36,9 @@ func DescribeJob(restorationContext *RestorationContext, vault, jobId string) (*
 		VaultName: aws.String(vault),
 	}
 	loggers.Printfln(loggers.Verbose, "Aws call: glacier.DescribeJob(%+v)", params)
-	return restorationContext.GlacierClient.DescribeJob(params)
+	resp, err := restorationContext.GlacierClient.DescribeJob(params)
+	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
+	return resp, err
 }
 
 func JobIsCompleted(restorationContext *RestorationContext, vault, jobId string) (bool, error) {
@@ -64,6 +66,7 @@ func DownloadPartialArchiveTo(restorationContext *RestorationContext, vault, job
 	}
 	loggers.Printfln(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)", params)
 	resp, err := restorationContext.GlacierClient.GetJobOutput(params)
+	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	utils.ExitIfError(err)
 	defer resp.Body.Close()
 	var file *os.File;
@@ -106,6 +109,7 @@ func StartRetrievePartialArchiveJob(restorationContext *RestorationContext, vaul
 	}
 	loggers.Printfln(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)", params)
 	resp, err := restorationContext.GlacierClient.InitiateJob(params)
+	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	if err != nil {
 		return "", 0, err
 	}
@@ -117,9 +121,10 @@ func GetDataRetrievalStrategy(restorationContext *RestorationContext) string {
 		AccountId:  &restorationContext.AccountId,
 	}
 	loggers.Printfln(loggers.Verbose, "Aws call: glacier.GetDataRetrievalPolicy(%v)", params)
-	output, err := restorationContext.GlacierClient.GetDataRetrievalPolicy(params)
+	resp, err := restorationContext.GlacierClient.GetDataRetrievalPolicy(params)
+	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	utils.ExitIfError(err)
-	return *output.Policy.Rules[0].Strategy
+	return *resp.Policy.Rules[0].Strategy
 }
 
 func InventoryTowElementsOfMappingVault(restorationContext *RestorationContext) string {
@@ -134,6 +139,7 @@ func InventoryTowElementsOfMappingVault(restorationContext *RestorationContext) 
 	}
 	loggers.Printfln(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)", params)
 	resp, err := restorationContext.GlacierClient.InitiateJob(params)
+	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	utils.ExitIfError(err)
 	return *(resp.JobId)
 }
@@ -151,6 +157,7 @@ func GetMappingArchiveIdFromInventory(restorationContext *RestorationContext, jo
 	}
 	loggers.Printfln(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)", params)
 	resp, err := restorationContext.GlacierClient.GetJobOutput(params)
+	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	utils.ExitIfError(err)
 	defer resp.Body.Close()
 	jsonContent, _ := ioutil.ReadAll(resp.Body)

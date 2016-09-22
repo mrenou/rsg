@@ -13,6 +13,7 @@ import (
 	"strings"
 	"rsg/utils"
 	"os"
+	"errors"
 )
 
 func mockStartPartialRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, vault, archiveId, bytesRange, jobIdToReturn string) *mock.Call {
@@ -25,7 +26,6 @@ func mockStartPartialRetrieveJob(glacierMock *GlacierMock, restorationContext *a
 		VaultName: aws.String(vault),
 		JobParameters: &glacier.JobParameters{
 			ArchiveId: aws.String(archiveId),
-			//Description: aws.String(description),
 			Type:        aws.String("archive-retrieval"),
 			RetrievalByteRange: retrievalByteRange,
 		},
@@ -35,6 +35,25 @@ func mockStartPartialRetrieveJob(glacierMock *GlacierMock, restorationContext *a
 		JobId: aws.String(jobIdToReturn),
 	}
 	return glacierMock.On("InitiateJob", params).Return(out, nil)
+}
+
+func mockStartPartialRetrieveJobWithError(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, vault, archiveId, bytesRange string, errorToReturn error) *mock.Call {
+	var retrievalByteRange *string = nil
+	if (bytesRange != "") {
+		retrievalByteRange = aws.String(bytesRange)
+	}
+	params := &glacier.InitiateJobInput{
+		AccountId: aws.String(restorationContext.AccountId),
+		VaultName: aws.String(vault),
+		JobParameters: &glacier.JobParameters{
+			ArchiveId: aws.String(archiveId),
+			Type:        aws.String("archive-retrieval"),
+			RetrievalByteRange: retrievalByteRange,
+		},
+	}
+
+
+	return glacierMock.On("InitiateJob", params).Return(nil, errorToReturn)
 }
 
 func mockStartPartialRetrieveJobForAny(glacierMock *GlacierMock, jobIdToReturn string) *mock.Call {
@@ -430,6 +449,49 @@ func TestDownloadArchives_retrieve_and_download_an_archive_already_started_and_c
 	// Then
 	assertFileContent(t, "../../testtmp/dest/data/folder/file1.txt", strings.Repeat("_", 1048576) + "hello")
 	assertFileContent(t, "../../testtmp/dest/data/folder/file2.txt", strings.Repeat("_", 1048576) + "hello")
+}
+
+func TestDownloadArchives_retrieve_when_archive_is_not_found(t *testing.T) {
+	// Given
+	CommonInitTest()
+	glacierMock, restorationContext := InitTestWithGlacier()
+	downloadContext := DownloadContext{
+		restorationContext: restorationContext,
+		bytesBySecond: 3496, // 1048800 on 5 min
+		maxArchivesRetrievingSize: utils.S_1MB * 2,
+		downloadSpeedAutoUpdate: false,
+		archivesRetrievingSize: 0,
+		archivePartRetrieveListMaxSize: 10,
+		archivePartRetrieveList: nil,
+		hasArchiveRows: false,
+		db: nil,
+		archiveRows:nil,
+	}
+
+	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
+	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'archiveId1', 1);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file2.txt', 'archiveId2', 1);")
+	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file3.txt', 'archiveId3', 1);")
+	db.Close()
+
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId1", "0-0", "jobId1").Once()
+	mockDescribeJob(glacierMock, restorationContext, "jobId1", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId1", restorationContext.Vault, "0-0", []byte("1")).Once()
+
+	mockStartPartialRetrieveJobWithError(glacierMock, restorationContext, restorationContext.Vault, "archiveId2", "0-0", errors.New("ResourceNotFoundException")).Once()
+	mockStartPartialRetrieveJob(glacierMock, restorationContext, restorationContext.Vault, "archiveId3", "0-0", "jobId2").Once()
+	mockDescribeJob(glacierMock, restorationContext, "jobId2", restorationContext.Vault, true).Once()
+	mockPartialOutputJob(glacierMock, restorationContext, "jobId2", restorationContext.Vault, "0-0", []byte("3")).Once()
+
+
+	// When
+	downloadContext.downloadArchives()
+
+	// Then
+	assertFileContent(t, "../../testtmp/dest/data/folder/file1.txt", "1")
+	assertFileDoestntExist(t, "../../testtmp/dest/data/folder/file2.txt")
+	assertFileContent(t, "../../testtmp/dest/data/folder/file3.txt", "3")
 }
 
 func assertFileContent(t *testing.T, filePath, expected string) {
