@@ -1,7 +1,7 @@
 package main
 
 import (
-	"rsg/vault"
+	"rsg/core"
 	"rsg/loggers"
 	"rsg/awsutils"
 	"rsg/utils"
@@ -11,20 +11,20 @@ import (
 func main() {
 	loggers.InitDefaultLog()
 	options := options.ParseOptions()
-	vault.DisplayInfoAboutCosts(options)
+	core.DisplayInfoAboutCosts(options)
 	session := awsutils.BuildSession(options.AwsId, options.AwsSecret)
 	accountId, err := awsutils.GetAccountId(session)
 	utils.ExitIfError(err)
-	region, vaultName := vault.SelectRegionVault(accountId, session, options.Region, options.Vault)
+	region, vaultName := core.SelectRegionVault(accountId, session, options.Region, options.Vault)
 	restorationContext := awsutils.CreateRestorationContext(session, accountId, region, vaultName, options)
-	vault.DownloadMappingArchive(restorationContext)
-	vault.QueryFiltersIfNecessary(restorationContext, options)
+	core.DownloadMappingArchive(restorationContext)
+	core.QueryFiltersIfNecessary(restorationContext, options)
 	if options.List {
-		vault.ListArchives(restorationContext)
+		core.ListArchives(restorationContext)
 	} else {
-		err = vault.CheckDestinationDirectory(restorationContext)
+		err = core.CheckDestinationDirectory(restorationContext)
 		utils.ExitIfError(err)
-		vault.DownloadArchives(restorationContext)
+		core.DownloadArchives(restorationContext)
 	}
 }
 

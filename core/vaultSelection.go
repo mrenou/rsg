@@ -1,4 +1,4 @@
-package vault
+package core
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
