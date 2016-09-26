@@ -17,15 +17,21 @@ func main() {
 	utils.ExitIfError(err)
 	region, vaultName := core.SelectRegionVault(accountId, session, options.Region, options.Vault)
 	restorationContext := awsutils.CreateRestorationContext(session, accountId, region, vaultName, options)
-	core.DownloadMappingArchive(restorationContext)
-	core.QueryFiltersIfNecessary(restorationContext, options)
-	if options.List {
-		core.ListArchives(restorationContext)
+	if options.ListJobs {
+		core.ListJobs(restorationContext)
+
 	} else {
-		err = core.CheckDestinationDirectory(restorationContext)
-		utils.ExitIfError(err)
-		core.DownloadArchives(restorationContext)
+		core.DownloadMappingArchive(restorationContext)
+		core.QueryFiltersIfNecessary(restorationContext, options)
+		if options.List {
+			core.ListArchives(restorationContext)
+		} else {
+			err = core.CheckDestinationDirectory(restorationContext)
+			utils.ExitIfError(err)
+			core.DownloadArchives(restorationContext)
+		}
 	}
+
 }
 
 

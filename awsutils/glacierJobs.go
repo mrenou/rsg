@@ -169,3 +169,14 @@ func GetMappingArchiveIdFromInventory(restorationContext *RestorationContext, jo
 	}
 	return &vaultInventory.ArchiveList[0]
 }
+
+func DoOnJobPages(restorationContext *RestorationContext, vault string, fn func(*glacier.ListJobsOutput, bool) bool) {
+	params := &glacier.ListJobsInput{
+		AccountId: aws.String(restorationContext.AccountId),
+		VaultName: aws.String(vault),
+	}
+	loggers.Printfln(loggers.Verbose, "Aws call: glacier.ListJobsPages(%v)", params)
+	err := restorationContext.GlacierClient.ListJobsPages(params, fn)
+	loggers.Printfln(loggers.Verbose, "Aws error %v\n", err)
+	utils.ExitIfError(err)
+}

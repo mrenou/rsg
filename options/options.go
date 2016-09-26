@@ -12,6 +12,7 @@ type Options struct {
 	Dest               string
 	Filters            []string
 	List               bool
+	ListJobs           bool
 	Region             string
 	Vault              string
 	InfoMessage        bool
@@ -30,6 +31,7 @@ func ParseOptions() Options {
 	flag.StringVar(&options.AwsSecret, "aws-secret", "", "secret of aws credentials")
 	flag.StringVarP(&options.Dest, "destination", "d", "", "path to restoration directory")
 	flag.BoolVarP(&options.List, "list", "l", false, "list files")
+	flag.BoolVar(&options.ListJobs, "list-jobs", false, "list aws jobs")
 	flag.BoolVar(&options.InfoMessage, "info-messages", true, "display information messages")
 	options.RefreshMappingFile = flag.Bool("refresh-mapping-file", false, "enable or disable refresh of mapping file")
 	options.KeepFiles = flag.Bool("keep-files", true, "enable or disable keep existing files")
@@ -63,6 +65,7 @@ func ParseOptions() Options {
 		loggers.Println(loggers.Verbose, "Options keep-files: nil", )
 	}
 	loggers.Printfln(loggers.Verbose, "Options list: %v", options.List)
+	loggers.Printfln(loggers.Verbose, "Options list jobs: %v", options.ListJobs)
 	loggers.Printfln(loggers.Verbose, "Options info-messages: %v", options.InfoMessage)
 	if options.RefreshMappingFile != nil {
 		loggers.Printfln(loggers.Verbose, "Options refresh-mapping-file: %v", *options.RefreshMappingFile)
