@@ -40,7 +40,7 @@ func downloadMappingArchive(restorationContext *RestorationContext) {
 	restorationContext.BytesBySecond = uint64(float64(sizeDownloaded) / time.Since(start).Seconds())
 	outputs.Printfln(outputs.Verbose, "New download speed: %v/s", bytefmt.ByteSize(restorationContext.BytesBySecond))
 	restorationContext.RegionVaultCache.MappingArchive = nil
-	restorationContext.WriteRegionVaultCache()
+	restorationContext.WriteCache()
 	outputs.Println(outputs.OptionalInfo, "Mapping archive has been downloaded")
 }
 
@@ -90,7 +90,7 @@ func getMappingArchive(restorationContext *RestorationContext) awsutils.Archive 
 			outputs.Printfln(outputs.OptionalInfo, "Job has finished: %s", jobId)
 		}
 		restorationContext.RegionVaultCache.MappingArchive = awsutils.GetArchiveIdFromInventory(restorationContext.GlacierClient, restorationContext.MappingVault, jobId)
-		restorationContext.WriteRegionVaultCache()
+		restorationContext.WriteCache()
 	}
 	outputs.Printfln(outputs.Verbose, "Mapping archive id is %s", restorationContext.RegionVaultCache.MappingArchive.ArchiveId)
 	return *restorationContext.RegionVaultCache.MappingArchive

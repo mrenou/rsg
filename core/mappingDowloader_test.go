@@ -327,7 +327,7 @@ func assertMappingArchive(t *testing.T, expected string) {
 }
 
 func assertCacheIsEmpty(t *testing.T) {
-	assert.Equal(t, RegionVaultCache{}, ReadRegionVaultCache("region", "vault", "../../testmp"))
+	assert.Equal(t, RegionVaultCache{}, ReadCache("../../testmp"))
 }
 
 type ReaderClosable struct {

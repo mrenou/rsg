@@ -44,7 +44,7 @@ func CreateRestorationContext(region, vault string, optionsValue options.Options
 	err = os.MkdirAll(workingDirPath, 0700)
 	utils.ExitIfError(err)
 	glacierClient := glacier.New(awsutils.Session, &aws.Config{Region: aws.String(region)})
-	cache := ReadRegionVaultCache(region, vault, workingDirPath);
+	cache := ReadCache(workingDirPath);
 	return &RestorationContext{GlacierClient: glacierClient,
 		WorkingDirPath: workingDirPath,
 		Region: region,
@@ -61,19 +61,18 @@ func CreateRestorationContext(region, vault string, optionsValue options.Options
 	}
 }
 
-func ReadRegionVaultCache(region, vault, workingDirPath string) RegionVaultCache {
+func ReadCache(workingDirPath string) RegionVaultCache {
 	if bytes, err := ioutil.ReadFile(workingDirPath + "/cache.json"); err == nil {
 		cache := RegionVaultCache{}
 		err = json.Unmarshal(bytes, &cache)
 		utils.ExitIfError(err)
-		// TODO warning ?
 		return cache
 	} else {
 		return RegionVaultCache{}
 	}
 }
 
-func (restorationContext *RestorationContext) WriteRegionVaultCache() {
+func (restorationContext *RestorationContext) WriteCache() {
 	outputs.Println(outputs.Verbose, "Write cache")
 	bytes, err := json.Marshal(restorationContext.RegionVaultCache)
 	utils.ExitIfError(err)
