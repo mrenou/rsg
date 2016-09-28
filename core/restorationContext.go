@@ -1,35 +1,29 @@
-package awsutils
+package core
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
 	"rsg/loggers"
 	"rsg/utils"
 	"github.com/aws/aws-sdk-go/service/glacier"
-	"github.com/aws/aws-sdk-go/aws/session"
 	"os/user"
 	"io/ioutil"
 	"encoding/json"
 	"os"
 	"github.com/aws/aws-sdk-go/service/glacier/glacieriface"
 	"rsg/options"
+	"rsg/awsutils"
 )
 
-type Archive struct {
-	ArchiveId string
-	Size      uint64
-}
-
 type RestorationContext struct {
-	GlacierClient      glacieriface.GlacierAPI
-	WorkingDirPath     string
-	Region             string
-	Vault              string
-	MappingVault       string
-	AccountId          string
-	RegionVaultCache   RegionVaultCache
-	DestinationDirPath string
-	BytesBySecond      uint64
-	Options            RestorationOptions
+	GlacierClient        glacieriface.GlacierAPI
+	WorkingDirPath       string
+	Region               string
+	Vault                string
+	MappingVault         string
+	RegionVaultCache     RegionVaultCache
+	DestinationDirPath   string
+	BytesBySecond        uint64
+	Options              RestorationOptions
 }
 
 type RestorationOptions struct {
@@ -40,32 +34,29 @@ type RestorationOptions struct {
 }
 
 type RegionVaultCache struct {
-	MappingVaultInventoryJobId string
-	MappingArchive             *Archive
-	MappingVaultRetrieveJobId  string
+	MappingArchive             *awsutils.Archive
 }
 
-func CreateRestorationContext(sessionValue *session.Session, accountId, region, vault string, optionsValue options.Options) *RestorationContext {
+func CreateRestorationContext(region, vault string, optionsValue options.Options) *RestorationContext {
 	usr, err := user.Current()
 	utils.ExitIfError(err)
 	workingDirPath := usr.HomeDir + "/.rsg/" + region + "/" + vault
 	err = os.MkdirAll(workingDirPath, 0700)
 	utils.ExitIfError(err)
-	glacierClient := glacier.New(sessionValue, &aws.Config{Region: aws.String(region)})
+	glacierClient := glacier.New(awsutils.Session, &aws.Config{Region: aws.String(region)})
 	cache := ReadRegionVaultCache(region, vault, workingDirPath);
-	return &RestorationContext{glacierClient,
-		workingDirPath,
-		region,
-		vault,
-		vault + "_mapping",
-		accountId,
-		cache,
-		optionsValue.Dest,
-		0,
-		RestorationOptions{optionsValue.Filters,
-			optionsValue.RefreshMappingFile,
-			optionsValue.KeepFiles,
-			optionsValue.InfoMessage,
+	return &RestorationContext{GlacierClient: glacierClient,
+		WorkingDirPath: workingDirPath,
+		Region: region,
+		Vault: vault,
+		MappingVault: vault + "_mapping",
+		RegionVaultCache: cache,
+		DestinationDirPath: optionsValue.Dest,
+		BytesBySecond: 0,
+		Options: RestorationOptions{Filters: optionsValue.Filters,
+			RefreshMappingFile: optionsValue.RefreshMappingFile,
+			KeepFiles: optionsValue.KeepFiles,
+			InfoMessage: optionsValue.InfoMessage,
 		},
 	}
 }

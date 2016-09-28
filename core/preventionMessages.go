@@ -18,9 +18,9 @@ func DisplayInfoAboutCosts(options options.Options) {
 	}
 }
 
-func DisplayWarnIfNotFreeTier(restorationContext *awsutils.RestorationContext) {
+func DisplayWarnIfNotFreeTier(restorationContext *RestorationContext) {
 	if restorationContext.Options.InfoMessage {
-		strategy := awsutils.GetDataRetrievalStrategy(restorationContext)
+		strategy := awsutils.GetDataRetrievalStrategy(restorationContext.GlacierClient)
 		if strategy != "FreeTier" {
 			loggers.Printfln(loggers.OptionalInfo, "##################################################################################################################")
 			loggers.Printfln(loggers.OptionalInfo, "Your data retrieval strategy is \"%v\", the retrieval operations could generate additional costs !!!", strategy)

@@ -1,14 +1,13 @@
 package core
 
 import (
-	"github.com/aws/aws-sdk-go/aws/session"
 	"rsg/loggers"
 	"rsg/utils"
 	"rsg/inputs"
 )
 
-func SelectRegionVault(accountId string, sessionValue *session.Session, givenRegion, givenVault string) (string, string) {
-	synologyCoupleVaults, err := GetSynologyVaults(accountId, sessionValue, givenRegion, givenVault)
+func SelectRegionVault(givenRegion, givenVault string) (string, string) {
+	synologyCoupleVaults, err := GetSynologyVaults(givenRegion, givenVault)
 	utils.ExitIfError(err)
 	return selectRegionVaultFromSynologyVaults(synologyCoupleVaults)
 }

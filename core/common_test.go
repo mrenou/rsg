@@ -23,10 +23,13 @@ func CommonInitTest() *bytes.Buffer {
 	os.MkdirAll("../../testtmp/cache", 0700)
 	loggers.InitLog(os.Stdout, buffer, buffer, buffer, os.Stderr)
 	awsutils.WaitTime = 1 * time.Nanosecond
+	awsutils.AccountId = "accountId"
+	awsutils.JobIdsAtStartup.MappingInventoryJobId = ""
+	awsutils.JobIdsAtStartup.MappingRetrievalJobId = ""
 	return buffer
 }
 
-func InitTestWithGlacier() (*GlacierMock, *awsutils.RestorationContext) {
+func InitTestWithGlacier() (*GlacierMock, *RestorationContext) {
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
 	err := os.MkdirAll(filepath.Dir(restorationContext.DestinationDirPath + "/"), 0700)
@@ -35,8 +38,16 @@ func InitTestWithGlacier() (*GlacierMock, *awsutils.RestorationContext) {
 	return glacierMock, restorationContext
 }
 
-func DefaultRestorationContext(glacierMock *GlacierMock) *awsutils.RestorationContext {
-	return &awsutils.RestorationContext{glacierMock, "../../testtmp/cache", "region", "vault", "vault_mapping", "accountId", awsutils.RegionVaultCache{}, "../../testtmp/dest", 0, awsutils.RestorationOptions{}}
+func DefaultRestorationContext(glacierMock *GlacierMock) *RestorationContext {
+	return &RestorationContext{GlacierClient: glacierMock,
+		WorkingDirPath: "../../testtmp/cache",
+		Region: "region",
+		Vault: "vault",
+		MappingVault: "vault_mapping",
+		RegionVaultCache: RegionVaultCache{},
+		DestinationDirPath: "../../testtmp/dest",
+		BytesBySecond: 0,
+		Options: RestorationOptions{}}
 }
 
 type SessionMock struct {

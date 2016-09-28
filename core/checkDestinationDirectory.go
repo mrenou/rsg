@@ -5,11 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"rsg/inputs"
-	"rsg/awsutils"
 	"rsg/loggers"
 )
 
-func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) error {
+func CheckDestinationDirectory(restorationContext *RestorationContext) error {
 	for {
 		if restorationContext.DestinationDirPath == "" {
 			restorationContext.DestinationDirPath = inputs.QueryString("What is the destination directory path ?")
@@ -32,7 +31,7 @@ func CheckDestinationDirectory(restorationContext *awsutils.RestorationContext) 
 	}
 }
 
-func queryAndUpdateKeepFiles(restorationContext *awsutils.RestorationContext) bool {
+func queryAndUpdateKeepFiles(restorationContext *RestorationContext) bool {
 	for restorationContext.Options.KeepFiles == nil {
 		if !inputs.QueryYesOrNo("Destination directory already exists, do you want to keep existing files ?", true) {
 			if inputs.QueryYesOrNo("Are you sure, all existing files restored will be deleted ?", false) {

@@ -38,21 +38,22 @@ type archivePartRetrieve struct {
 	nextByteIndexToWrite uint64
 }
 
-type ArchiveRetrieveResult int
-
-const (
-	SUCCESS ArchiveRetrieveResult = iota
-	SKIPPED
-	RETRY
-)
-
 // + 10 is safety margin
 const archiveRetrieveStructSize = 92 + 138 + 8 + 8 + 8 + 10
 const _4hoursInSeconds = 60 * 60 * 4
 const _5minInSeconds = 60 * 5
 
+type ArchiveRetrieveResult int
+
+const (
+	STARTED ArchiveRetrieveResult = iota
+	IN_PROGRESS
+	SKIPPED
+	RETRY
+)
+
 type DownloadContext struct {
-	restorationContext             *awsutils.RestorationContext
+	restorationContext             *RestorationContext
 	bytesBySecond                  uint64
 	downloadSpeedAutoUpdate        bool
 	nbBytesToDownload              uint64
@@ -73,19 +74,19 @@ func (downloadContext *DownloadContext) archivesRetrievingSizeLeft() uint64 {
 	return downloadContext.maxArchivesRetrievingSize - downloadContext.archivesRetrievingSize
 }
 
-func DownloadArchives(restorationContext *awsutils.RestorationContext) {
+func DownloadArchives(restorationContext *RestorationContext) {
 	downloadContext := new(DownloadContext)
 	downloadContext.restorationContext = restorationContext
 	downloadContext.downloadSpeedAutoUpdate = true
 	downloadContext.archivePartRetrieveListMaxSize = utils.S_1GB / archiveRetrieveStructSize
 	if downloadContext.bytesBySecond == 0 {
-		downloadContext.bytesBySecond = detectOrSelectDownloadSpeed(restorationContext)
+		downloadContext.bytesBySecond = detectOrSelectDownloadSpeed()
 	}
 	downloadContext.maxArchivesRetrievingSize = downloadContext.bytesBySecond * uint64(_4hoursInSeconds)
 	downloadContext.downloadArchives()
 }
 
-func detectOrSelectDownloadSpeed(restorationContext *awsutils.RestorationContext) uint64 {
+func detectOrSelectDownloadSpeed() uint64 {
 	downloadSpeed, err := speedtest.SpeedTest()
 	if err != nil {
 		loggers.Printfln(loggers.Error, "Cannot test download speed : %v", err)
@@ -226,12 +227,23 @@ func (downloadContext *DownloadContext) startArchivePartRetrieveJob(archiveToRet
 	sizeToRetrieve, isEndOfFile := downloadContext.computeSizeToRetrieve(downloadContext.uncompletedRetrieve)
 	if (isEndOfFile || sizeToRetrieve / utils.S_1MB > 0) {
 		startStatus, jobId, sizeRetrieved := downloadContext.retryArchivePartRetrieveJob(archiveToRetrieve, sizeToRetrieve)
-		if startStatus == SUCCESS {
-			loggers.Printfln(loggers.Verbose, "Job has started for archive id %s to retrieve %v from %v byte index",
+		if startStatus == STARTED || startStatus == IN_PROGRESS {
+			statusStr := ""
+			if startStatus == STARTED {
+				statusStr = "has started"
+			} else {
+				statusStr = "is in progress"
+			}
+			loggers.Printfln(loggers.Verbose, "Job %s for archive id %s to retrieve %v from %v byte index",
+				statusStr,
 				archiveToRetrieve.archiveId,
 				bytefmt.ByteSize(sizeRetrieved),
 				archiveToRetrieve.nextByteIndexToRetrieve)
-			archivePartRetrieve := &archivePartRetrieve{jobId, archiveToRetrieve.archiveId, sizeRetrieved, archiveToRetrieve.size, archiveToRetrieve.nextByteIndexToRetrieve}
+			archivePartRetrieve := &archivePartRetrieve{jobId: jobId,
+				archiveId: archiveToRetrieve.archiveId,
+				retrievedSize: sizeRetrieved,
+				archiveSize: archiveToRetrieve.size,
+				nextByteIndexToWrite: archiveToRetrieve.nextByteIndexToRetrieve}
 			archiveToRetrieve.nextByteIndexToRetrieve += sizeRetrieved
 			downloadContext.archivesRetrievingSize += sizeRetrieved
 			downloadContext.archivePartRetrieveList.PushFront(archivePartRetrieve)
@@ -243,31 +255,32 @@ func (downloadContext *DownloadContext) startArchivePartRetrieveJob(archiveToRet
 }
 
 func (downloadContext *DownloadContext) retryArchivePartRetrieveJob(archiveToRetrieve *archiveRetrieve, sizeToRetrieve uint64) (ArchiveRetrieveResult, string, uint64) {
-	var jobId string
-	var sizeRetrieved uint64
-	var err error
+
 	for {
-		jobId, sizeRetrieved, err = awsutils.StartRetrievePartialArchiveJob(downloadContext.restorationContext,
+		jobStartStatus := awsutils.StartRetrievePartialArchiveJob(downloadContext.restorationContext.GlacierClient,
 			downloadContext.restorationContext.Vault,
 			awsutils.Archive{archiveToRetrieve.archiveId, archiveToRetrieve.size},
 			archiveToRetrieve.nextByteIndexToRetrieve,
 			sizeToRetrieve)
-		if err == nil {
-			return SUCCESS, jobId, sizeRetrieved
+		if jobStartStatus.Err == nil {
+			if jobStartStatus.IsResumed {
+				return IN_PROGRESS, jobStartStatus.JobId, jobStartStatus.SizeRetrieved
+			}
+			return STARTED, jobStartStatus.JobId, jobStartStatus.SizeRetrieved
 		}
-		if strings.Contains(err.Error(), "PolicyEnforcedException") {
+		if strings.Contains(jobStartStatus.Err.Error(), "PolicyEnforcedException") {
 			if (downloadContext.uncompletedDownload != nil) {
 				return RETRY, "", 0
 			}
 			downloadContext.displayStatus("rate limit reached, waiting")
 			time.Sleep(5 * time.Minute)
 
-		} else if strings.Contains(err.Error(), "ResourceNotFoundException") {
+		} else if strings.Contains(jobStartStatus.Err.Error(), "ResourceNotFoundException") {
 			loggers.Printfln(loggers.Warning, "Archive not found %s, skipped...", archiveToRetrieve.archiveId)
 			downloadContext.uncompletedRetrieve = nil
 			return SKIPPED, "", 0
 		} else {
-			utils.ExitIfError(err)
+			utils.ExitIfError(jobStartStatus.Err)
 		}
 	}
 }
@@ -325,7 +338,7 @@ func (downloadContext *DownloadContext) updateDownloadSpeed(downloadedSize uint6
 	}
 }
 
-func (downloadContext *DownloadContext) handleArchivePartDownloadCompletion(restorationContext *awsutils.RestorationContext) {
+func (downloadContext *DownloadContext) handleArchivePartDownloadCompletion(restorationContext *RestorationContext) {
 	if (downloadContext.nextByteIndexToDownload >= downloadContext.uncompletedDownload.retrievedSize) {
 		downloadContext.handleArchiveFileDownloadCompletion(downloadContext.uncompletedDownload.archiveId, downloadContext.uncompletedDownload.archiveSize)
 		downloadContext.uncompletedDownload = nil
@@ -373,18 +386,18 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(arch
 func (downloadContext *DownloadContext) waitNextArchivePartIsRetrieved() *archivePartRetrieve {
 	element := downloadContext.archivePartRetrieveList.Back()
 	archivePartRetrieve := element.Value.(*archivePartRetrieve)
-	awsutils.WaitJobIsCompleted(downloadContext.restorationContext, downloadContext.restorationContext.Vault, archivePartRetrieve.jobId)
+	awsutils.WaitJobIsCompleted(downloadContext.restorationContext.GlacierClient, downloadContext.restorationContext.Vault, archivePartRetrieve.jobId)
 	downloadContext.archivePartRetrieveList.Remove(element)
 	return archivePartRetrieve
 }
 
-func downloadArchivePart(restorationContext *awsutils.RestorationContext, archivePartRetrieve *archivePartRetrieve, fromByteIndex, nbBytesCanDownload uint64) (uint64, time.Duration) {
+func downloadArchivePart(restorationContext *RestorationContext, archivePartRetrieve *archivePartRetrieve, fromByteIndex, nbBytesCanDownload uint64) (uint64, time.Duration) {
 	sizeToDownload := archivePartRetrieve.retrievedSize - fromByteIndex
 	if (sizeToDownload > nbBytesCanDownload) {
 		sizeToDownload = nbBytesCanDownload
 	}
 	start := time.Now()
-	sizeDownloaded := awsutils.DownloadPartialArchiveTo(restorationContext,
+	sizeDownloaded := awsutils.DownloadPartialArchiveTo(restorationContext.GlacierClient,
 		restorationContext.Vault,
 		archivePartRetrieve.jobId,
 		restorationContext.DestinationDirPath + "/" + archivePartRetrieve.archiveId,

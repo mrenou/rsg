@@ -1,11 +1,10 @@
 package core
 
 import (
-	"rsg/awsutils"
 	"rsg/loggers"
 )
 
-func ListArchives(restorationContext *awsutils.RestorationContext) {
+func ListArchives(restorationContext *RestorationContext) {
 	db := InitDb(restorationContext.GetMappingFilePath())
 	defer db.Close()
 

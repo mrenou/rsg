@@ -18,12 +18,11 @@ import (
 	"rsg/consts"
 )
 
-func mockStartMappingJobInventory(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext) *mock.Call {
+func mockStartMappingJobInventory(glacierMock *GlacierMock, vault string) *mock.Call {
 	params := &glacier.InitiateJobInput{
-		AccountId: aws.String(restorationContext.AccountId),
-		VaultName: aws.String(restorationContext.MappingVault),
+		AccountId: aws.String(awsutils.AccountId),
+		VaultName: aws.String(vault),
 		JobParameters: &glacier.JobParameters{
-			Description: aws.String("inventory " + restorationContext.MappingVault),
 			Type:        aws.String("inventory-retrieval"),
 			InventoryRetrievalParameters: &glacier.InventoryRetrievalJobInput{Limit: aws.String("2")},
 		},
@@ -36,9 +35,9 @@ func mockStartMappingJobInventory(glacierMock *GlacierMock, restorationContext *
 	return glacierMock.On("InitiateJob", params).Return(out, nil)
 }
 
-func mockDescribeJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, jobId, vault string, completed bool) *mock.Call {
+func mockDescribeJob(glacierMock *GlacierMock, jobId, vault string, completed bool) *mock.Call {
 	params := &glacier.DescribeJobInput{
-		AccountId: aws.String(restorationContext.AccountId),
+		AccountId: aws.String(awsutils.AccountId),
 		JobId:     aws.String(jobId),
 		VaultName: aws.String(vault),
 	}
@@ -50,9 +49,9 @@ func mockDescribeJob(glacierMock *GlacierMock, restorationContext *awsutils.Rest
 	return glacierMock.On("DescribeJob", params).Return(out, nil)
 }
 
-func mockDescribeJobErr(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, jobId, vault string, err error) *mock.Call {
+func mockDescribeJobErr(glacierMock *GlacierMock, jobId, vault string, err error) *mock.Call {
 	params := &glacier.DescribeJobInput{
-		AccountId: aws.String(restorationContext.AccountId),
+		AccountId: aws.String(awsutils.AccountId),
 		JobId:     aws.String(jobId),
 		VaultName: aws.String(vault),
 	}
@@ -60,9 +59,9 @@ func mockDescribeJobErr(glacierMock *GlacierMock, restorationContext *awsutils.R
 	return glacierMock.On("DescribeJob", params).Return(nil, err)
 }
 
-func mockOutputJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, jobId, vault string, content []byte) *mock.Call {
+func mockOutputJob(glacierMock *GlacierMock, jobId, vault string, content []byte) *mock.Call {
 	params := &glacier.GetJobOutputInput{
-		AccountId: aws.String(restorationContext.AccountId),
+		AccountId: aws.String(awsutils.AccountId),
 		JobId:     aws.String(jobId),
 		VaultName: aws.String(vault),
 	}
@@ -74,13 +73,12 @@ func mockOutputJob(glacierMock *GlacierMock, restorationContext *awsutils.Restor
 	return glacierMock.On("GetJobOutput", params).Return(out, nil)
 }
 
-func mockStartRetrieveJob(glacierMock *GlacierMock, restorationContext *awsutils.RestorationContext, archiveId, description, retrievalByteRange, jobIdToReturn string) *mock.Call {
+func mockStartRetrieveJob(glacierMock *GlacierMock, vault, archiveId, retrievalByteRange, jobIdToReturn string) *mock.Call {
 	params := &glacier.InitiateJobInput{
-		AccountId: aws.String(restorationContext.AccountId),
-		VaultName: aws.String(restorationContext.MappingVault),
+		AccountId: aws.String(awsutils.AccountId),
+		VaultName: aws.String(vault),
 		JobParameters: &glacier.JobParameters{
 			ArchiveId: aws.String(archiveId),
-			//Description: aws.String(description),
 			Type:        aws.String("archive-retrieval"),
 			RetrievalByteRange: aws.String(retrievalByteRange),
 		},
@@ -97,12 +95,12 @@ func TestDownloadMappingArchive_download_mapping_first_time(t *testing.T) {
 	buffer := CommonInitTest()
 	glacierMock, restorationContext := InitTestWithGlacier()
 
-	mockStartMappingJobInventory(glacierMock, restorationContext)
-	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
-	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
+	mockStartMappingJobInventory(glacierMock, restorationContext.MappingVault)
+	mockDescribeJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
+	mockStartRetrieveJob(glacierMock, restorationContext.MappingVault, "mappingArchiveId", "0-41", "retrieveMappingJobId")
+	mockDescribeJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -112,24 +110,24 @@ func TestDownloadMappingArchive_download_mapping_first_time(t *testing.T) {
 	assertCacheIsEmpty(t)
 
 	assert.Equal(t, "Job to find mapping archive id has started (can last up to 4 hours): inventoryMappingJobId" + consts.LINE_BREAK +
-	"Job has finished: inventoryMappingJobId" + consts.LINE_BREAK +
-	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
-	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
-	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
+		"Job has finished: inventoryMappingJobId" + consts.LINE_BREAK +
+		"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+		"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+		"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_job_in_progress(t *testing.T) {
 	// Given
 	buffer := CommonInitTest()
 	glacierMock, restorationContext := InitTestWithGlacier()
-	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"inventoryMappingJobId", nil, ""}
+	awsutils.JobIdsAtStartup.MappingInventoryJobId = "inventoryMappingJobId"
 
-	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, false).Once()
-	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
-	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
+	mockDescribeJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, false).Once()
+	mockDescribeJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
+	mockStartRetrieveJob(glacierMock, restorationContext.MappingVault, "mappingArchiveId", "0-41", "retrieveMappingJobId")
+	mockDescribeJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -139,25 +137,25 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_in_progress(
 	assertCacheIsEmpty(t)
 
 	assert.Equal(t, "Job to find mapping archive id is in progress (can last up to 4 hours): inventoryMappingJobId" + consts.LINE_BREAK +
-	"Job has finished: inventoryMappingJobId" + consts.LINE_BREAK +
-	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
-	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
-	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
+		"Job has finished: inventoryMappingJobId" + consts.LINE_BREAK +
+		"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+		"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+		"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_job_deprecated(t *testing.T) {
 	// Given
 	buffer := CommonInitTest()
 	glacierMock, restorationContext := InitTestWithGlacier()
-	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"unknownInventoryMappingJobId", nil, ""}
+	awsutils.JobIdsAtStartup.MappingInventoryJobId = "unknownInventoryMappingJobId"
 
-	mockDescribeJobErr(glacierMock, restorationContext, "unknownInventoryMappingJobId", restorationContext.MappingVault, errors.New("The job ID was not found"))
-	mockStartMappingJobInventory(glacierMock, restorationContext)
-	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
-	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
+	mockDescribeJobErr(glacierMock, "unknownInventoryMappingJobId", restorationContext.MappingVault, errors.New("The job ID was not found"))
+	mockStartMappingJobInventory(glacierMock, restorationContext.MappingVault)
+	mockDescribeJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
+	mockStartRetrieveJob(glacierMock, restorationContext.MappingVault, "mappingArchiveId", "0-41", "retrieveMappingJobId")
+	mockDescribeJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -167,24 +165,24 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_job_deprecated(t
 	assertCacheIsEmpty(t)
 
 	assert.Equal(t, "WARNING: Inventory job cahed for mapping vaul was not found" + consts.LINE_BREAK +
-	"Job to find mapping archive id has started (can last up to 4 hours): inventoryMappingJobId" + consts.LINE_BREAK +
-	"Job has finished: inventoryMappingJobId" + consts.LINE_BREAK +
-	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
-	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
-	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
+		"Job to find mapping archive id has started (can last up to 4 hours): inventoryMappingJobId" + consts.LINE_BREAK +
+		"Job has finished: inventoryMappingJobId" + consts.LINE_BREAK +
+		"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+		"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+		"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_inventory_done(t *testing.T) {
 	// Given
 	buffer := CommonInitTest()
 	glacierMock, restorationContext := InitTestWithGlacier()
-	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"inventoryMappingJobId", nil, ""}
+	awsutils.JobIdsAtStartup.MappingInventoryJobId = "inventoryMappingJobId"
 
-	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
-	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
+	mockDescribeJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
+	mockStartRetrieveJob(glacierMock, restorationContext.MappingVault, "mappingArchiveId", "0-41", "retrieveMappingJobId")
+	mockDescribeJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -194,19 +192,20 @@ func TestDownloadMappingArchive_download_mapping_with_inventory_done(t *testing.
 	assertCacheIsEmpty(t)
 
 	assert.Equal(t, "Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
-	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
-	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
+		"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+		"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_job_in_progress(t *testing.T) {
 	// Given
 	buffer := CommonInitTest()
 	glacierMock, restorationContext := InitTestWithGlacier()
-	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
+	awsutils.JobIdsAtStartup.MappingRetrievalJobId = "retrieveMappingJobId"
+	restorationContext.RegionVaultCache = RegionVaultCache{MappingArchive: &awsutils.Archive{"mappingArchiveId", 42},}
 
-	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, false).Once()
-	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
+	mockDescribeJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, false).Once()
+	mockDescribeJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -216,20 +215,21 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_job_in_progress(t
 	assertCacheIsEmpty(t)
 
 	assert.Equal(t, "Job to retrieve mapping archive is in progress (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
-	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
-	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
+		"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+		"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_job_deprecated(t *testing.T) {
 	// Given
 	buffer := CommonInitTest()
 	glacierMock, restorationContext := InitTestWithGlacier()
-	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "unknownRetrieveMappingJobId"}
+	awsutils.JobIdsAtStartup.MappingRetrievalJobId = "unknownRetrieveMappingJobId"
+	restorationContext.RegionVaultCache = RegionVaultCache{MappingArchive: &awsutils.Archive{"mappingArchiveId", 42},}
 
-	mockDescribeJobErr(glacierMock, restorationContext, "unknownRetrieveMappingJobId", restorationContext.MappingVault, errors.New("The job ID was not found"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
-	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
+	mockDescribeJobErr(glacierMock, "unknownRetrieveMappingJobId", restorationContext.MappingVault, errors.New("The job ID was not found"))
+	mockStartRetrieveJob(glacierMock, restorationContext.MappingVault, "mappingArchiveId", "0-41", "retrieveMappingJobId")
+	mockDescribeJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -239,19 +239,20 @@ func TestDownloadMappingArchive_download_mapping_with_retrieve_job_deprecated(t 
 	assertCacheIsEmpty(t)
 
 	assert.Equal(t, "WARNING: Retrieve mapping archive job cached was not found" + consts.LINE_BREAK +
-	"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
-	"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
-	"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
+		"Job to retrieve mapping archive has started (can last up to 4 hours): retrieveMappingJobId" + consts.LINE_BREAK +
+		"Job has finished: retrieveMappingJobId" + consts.LINE_BREAK +
+		"Mapping archive has been downloaded" + consts.LINE_BREAK, string(buffer.Bytes()))
 }
 
 func TestDownloadMappingArchive_download_mapping_with_retrieve_done(t *testing.T) {
 	// Given
 	buffer := CommonInitTest()
 	glacierMock, restorationContext := InitTestWithGlacier()
-	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
+	awsutils.JobIdsAtStartup.MappingRetrievalJobId = "retrieveMappingJobId"
+	restorationContext.RegionVaultCache = RegionVaultCache{MappingArchive: &awsutils.Archive{"mappingArchiveId", 42},}
 
-	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
+	mockDescribeJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -268,7 +269,8 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists(t *
 	buffer := CommonInitTest()
 	glacierMock := new(GlacierMock)
 	restorationContext := DefaultRestorationContext(glacierMock)
-	restorationContext.RegionVaultCache = awsutils.RegionVaultCache{"", &awsutils.Archive{"mappingArchiveId", 42}, "retrieveMappingJobId"}
+	awsutils.JobIdsAtStartup.MappingRetrievalJobId = "retrieveMappingJobId"
+	restorationContext.RegionVaultCache = RegionVaultCache{MappingArchive: &awsutils.Archive{"mappingArchiveId", 42},}
 
 	ioutil.WriteFile("../../testtmp/cache/mapping.sqllite", []byte("hello !"), 0600)
 
@@ -296,12 +298,12 @@ func TestDownloadMappingArchive_download_mapping_with_mapping_already_exists_but
 
 	inputs.StdinReader = bufio.NewReader(bytes.NewReader([]byte("y" + consts.LINE_BREAK)))
 
-	mockStartMappingJobInventory(glacierMock, restorationContext)
-	mockDescribeJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
-	mockStartRetrieveJob(glacierMock, restorationContext, "mappingArchiveId", "restore mapping from " + restorationContext.MappingVault, "0-41", "retrieveMappingJobId")
-	mockDescribeJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, true)
-	mockOutputJob(glacierMock, restorationContext, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
+	mockStartMappingJobInventory(glacierMock, restorationContext.MappingVault)
+	mockDescribeJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "inventoryMappingJobId", restorationContext.MappingVault, []byte("{\"ArchiveList\":[{\"ArchiveId\":\"mappingArchiveId\",\"Size\":42}]}"))
+	mockStartRetrieveJob(glacierMock, restorationContext.MappingVault, "mappingArchiveId", "0-41", "retrieveMappingJobId")
+	mockDescribeJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, true)
+	mockOutputJob(glacierMock, "retrieveMappingJobId", restorationContext.MappingVault, []byte("hello !"))
 
 	// When
 	DownloadMappingArchive(restorationContext)
@@ -325,7 +327,7 @@ func assertMappingArchive(t *testing.T, expected string) {
 }
 
 func assertCacheIsEmpty(t *testing.T) {
-	assert.Equal(t, awsutils.RegionVaultCache{}, awsutils.ReadRegionVaultCache("region", "vault", "../../testmp"))
+	assert.Equal(t, RegionVaultCache{}, ReadRegionVaultCache("region", "vault", "../../testmp"))
 }
 
 type ReaderClosable struct {

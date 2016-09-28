@@ -15,23 +15,23 @@ func TestGetSynologyVaults_should_return_one_vault(t *testing.T) {
 	glacierMock := new(GlacierMock)
 
 	params := &glacier.ListVaultsInput{
-		AccountId: aws.String("42"), // Required
+		AccountId: aws.String("accountId"), // Required
 		Limit:     nil,
 		Marker:    nil,
 	}
 
 	out := &glacier.ListVaultsOutput{VaultList: []*glacier.DescribeVaultOutput{
-		&glacier.DescribeVaultOutput{VaultName: aws.String("a")},
-		&glacier.DescribeVaultOutput{VaultName: aws.String("vault1")},
-		&glacier.DescribeVaultOutput{VaultName: aws.String("vault1_mapping")},
-		&glacier.DescribeVaultOutput{VaultName: aws.String("z")},
+		{VaultName: aws.String("a")},
+		{VaultName: aws.String("vault1")},
+		{VaultName: aws.String("vault1_mapping")},
+		{VaultName: aws.String("z")},
 	}}
 
 	glacierMock.On("ListVaults", params).Return(out, nil)
 
 	// When
 
-	synoVaultCouples, _ := getSynologyVaultsForRegion("42", glacierMock, "region", "")
+	synoVaultCouples, _ := getSynologyVaultsForRegion(glacierMock, "region", "")
 
 	// Then
 
@@ -48,38 +48,38 @@ func TestGetSynologyVaults_should_return_two_vault2_with_two_aws_requests(t *tes
 	glacierMock := new(GlacierMock)
 
 	params := &glacier.ListVaultsInput{
-		AccountId: aws.String("42"), // Required
+		AccountId: aws.String("accountId"), // Required
 		Limit:     nil,
 		Marker:    nil,
 	}
 
 	out := &glacier.ListVaultsOutput{Marker: aws.String("marker"), VaultList: []*glacier.DescribeVaultOutput{
-		&glacier.DescribeVaultOutput{VaultName: aws.String("a")},
-		&glacier.DescribeVaultOutput{VaultName: aws.String("vault1")},
-		&glacier.DescribeVaultOutput{VaultName: aws.String("vault1_mapping")},
-		&glacier.DescribeVaultOutput{VaultName: aws.String("z")},
-		&glacier.DescribeVaultOutput{VaultName: aws.String("vault2")},
+		{VaultName: aws.String("a")},
+		{VaultName: aws.String("vault1")},
+		{VaultName: aws.String("vault1_mapping")},
+		{VaultName: aws.String("z")},
+		{VaultName: aws.String("vault2")},
 	}}
 
 	glacierMock.On("ListVaults", params).Return(out, nil)
 
 	params = &glacier.ListVaultsInput{
-		AccountId: aws.String("42"), // Required
+		AccountId: aws.String("accountId"), // Required
 		Limit:     nil,
 		Marker:    aws.String("marker"),
 	}
 
 	out = &glacier.ListVaultsOutput{VaultList: []*glacier.DescribeVaultOutput{
-		&glacier.DescribeVaultOutput{VaultName: aws.String("b")},
-		&glacier.DescribeVaultOutput{VaultName: aws.String("vault2_mapping")},
-		&glacier.DescribeVaultOutput{VaultName: aws.String("y")},
+		{VaultName: aws.String("b")},
+		{VaultName: aws.String("vault2_mapping")},
+		{VaultName: aws.String("y")},
 	}}
 
 	glacierMock.On("ListVaults", params).Return(out, nil)
 
 	// When
 
-	synoVaultCouples, _ := getSynologyVaultsForRegion("42", glacierMock, "region", "")
+	synoVaultCouples, _ := getSynologyVaultsForRegion(glacierMock, "region", "")
 
 	// Then
 
