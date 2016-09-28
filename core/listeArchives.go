@@ -1,7 +1,7 @@
 package core
 
 import (
-	"rsg/loggers"
+	"rsg/outputs"
 )
 
 func ListArchives(restorationContext *RestorationContext) {
@@ -14,6 +14,6 @@ func ListArchives(restorationContext *RestorationContext) {
 	for archiveRows.Next() {
 		var basePath string
 		archiveRows.Scan(&basePath)
-		loggers.Printfln(loggers.Info, "%v", basePath)
+		outputs.Printfln(outputs.Info, "%v", basePath)
 	}
 }

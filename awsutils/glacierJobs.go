@@ -3,7 +3,7 @@ package awsutils
 import (
 	"time"
 	"github.com/aws/aws-sdk-go/aws"
-	"rsg/loggers"
+	"rsg/outputs"
 	"rsg/utils"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"strconv"
@@ -72,13 +72,13 @@ func LoadJobIdsAtStartup(glacierClient glacieriface.GlacierAPI, mappingVault, va
 	DoOnJobPages(glacierClient, mappingVault, recordJobsFn)
 	DoOnJobPages(glacierClient, vault, recordJobsFn)
 	if JobIdsAtStartup.MappingInventoryJobId != "" {
-		loggers.Printfln(loggers.Verbose, "Mapping inventory job found : %s", JobIdsAtStartup.MappingInventoryJobId)
+		outputs.Printfln(outputs.Verbose, "Mapping inventory job found : %s", JobIdsAtStartup.MappingInventoryJobId)
 	}
 	if JobIdsAtStartup.MappingRetrievalJobId != "" {
-		loggers.Printfln(loggers.Verbose, "Mapping retrivial job found : %s", JobIdsAtStartup.MappingRetrievalJobId)
+		outputs.Printfln(outputs.Verbose, "Mapping retrivial job found : %s", JobIdsAtStartup.MappingRetrievalJobId)
 	}
 	if fileRetrievalJobCounter > 0 {
-		loggers.Printfln(loggers.Verbose, "%v file retrivial job found", fileRetrievalJobCounter)
+		outputs.Printfln(outputs.Verbose, "%v file retrivial job found", fileRetrievalJobCounter)
 	}
 }
 
@@ -117,9 +117,9 @@ func DescribeJob(glacierClient glacieriface.GlacierAPI, vault, jobId string) (*g
 		JobId:     aws.String(jobId),
 		VaultName: aws.String(vault),
 	}
-	loggers.Printfln(loggers.Verbose, "Aws call: glacier.DescribeJob(%+v)", params)
+	outputs.Printfln(outputs.Verbose, "Aws call: glacier.DescribeJob(%+v)", params)
 	resp, err := glacierClient.DescribeJob(params)
-	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
+	outputs.Printfln(outputs.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	return resp, err
 }
 
@@ -138,19 +138,19 @@ func DownloadPartialArchiveTo(glacierClient glacieriface.GlacierAPI, vault, jobI
 		VaultName: aws.String(vault),
 		Range: rangeToRetrieve,
 	}
-	loggers.Printfln(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)", params)
+	outputs.Printfln(outputs.Verbose, "Aws call: glacier.GetJobOutput(%v)", params)
 	resp, err := glacierClient.GetJobOutput(params)
-	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
+	outputs.Printfln(outputs.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	utils.ExitIfError(err)
 	defer resp.Body.Close()
 	var file *os.File;
 	file, err = os.OpenFile(destPath, os.O_CREATE | os.O_RDWR, 0600)
 	file.Seek(int64(fromByteToWrite), os.SEEK_SET)
 	utils.ExitIfError(err)
-	loggers.Printfln(loggers.Verbose, "Copy file into: %v", destPath)
+	outputs.Printfln(outputs.Verbose, "Copy file into: %v", destPath)
 	written, err := io.Copy(file, resp.Body)
 	written64 := uint64(written)
-	loggers.Printfln(loggers.Verbose, "%v copied", bytefmt.ByteSize(written64))
+	outputs.Printfln(outputs.Verbose, "%v copied", bytefmt.ByteSize(written64))
 	utils.ExitIfError(err)
 	return written64
 }
@@ -182,7 +182,7 @@ func StartRetrievePartialArchiveJob(glacierClient glacieriface.GlacierAPI, vault
 	rangeToRetrieve = strconv.FormatUint(fromByte, 10) + "-" + strconv.FormatUint(fromByte + sizeToRetrieve - 1, 10)
 
 	if existingJobsId := JobIdsAtStartup.GetJobIdForFileRetrieval(archive.ArchiveId, rangeToRetrieve); existingJobsId != "" {
-		loggers.Printfln(loggers.Verbose, "BOOM %v", existingJobsId)
+		outputs.Printfln(outputs.Verbose, "BOOM %v", existingJobsId)
 		return JobStartStatus{JobId: existingJobsId, IsResumed: true, IsSuccess: true, SizeRetrieved: sizeToRetrieve}
 	} else {
 		params := &glacier.InitiateJobInput{
@@ -194,9 +194,9 @@ func StartRetrievePartialArchiveJob(glacierClient glacieriface.GlacierAPI, vault
 				RetrievalByteRange: aws.String(rangeToRetrieve),
 			},
 		}
-		loggers.Printfln(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)", params)
+		outputs.Printfln(outputs.Verbose, "Aws call: glacier.InitiateJob(%v)", params)
 		resp, err := glacierClient.InitiateJob(params)
-		loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
+		outputs.Printfln(outputs.Verbose, "Aws response: %v (error %v)\n", resp, err)
 		if err != nil {
 			return JobStartStatus{IsSuccess: false, Err: err}
 		}
@@ -208,9 +208,9 @@ func GetDataRetrievalStrategy(glacierClient glacieriface.GlacierAPI) string {
 	params := &glacier.GetDataRetrievalPolicyInput{
 		AccountId:  &AccountId,
 	}
-	loggers.Printfln(loggers.Verbose, "Aws call: glacier.GetDataRetrievalPolicy(%v)", params)
+	outputs.Printfln(outputs.Verbose, "Aws call: glacier.GetDataRetrievalPolicy(%v)", params)
 	resp, err := glacierClient.GetDataRetrievalPolicy(params)
-	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
+	outputs.Printfln(outputs.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	utils.ExitIfError(err)
 	return *resp.Policy.Rules[0].Strategy
 }
@@ -224,9 +224,9 @@ func InventoryTowElementsOfVault(glacierClient glacieriface.GlacierAPI, vault st
 			InventoryRetrievalParameters: &glacier.InventoryRetrievalJobInput{Limit: aws.String("2")},
 		},
 	}
-	loggers.Printfln(loggers.Verbose, "Aws call: glacier.InitiateJob(%v)", params)
+	outputs.Printfln(outputs.Verbose, "Aws call: glacier.InitiateJob(%v)", params)
 	resp, err := glacierClient.InitiateJob(params)
-	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
+	outputs.Printfln(outputs.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	utils.ExitIfError(err)
 	return *(resp.JobId)
 }
@@ -242,9 +242,9 @@ func GetArchiveIdFromInventory(glacierClient glacieriface.GlacierAPI, vault, job
 		VaultName: aws.String(vault),
 		Range:     nil,
 	}
-	loggers.Printfln(loggers.Verbose, "Aws call: glacier.GetJobOutput(%v)", params)
+	outputs.Printfln(outputs.Verbose, "Aws call: glacier.GetJobOutput(%v)", params)
 	resp, err := glacierClient.GetJobOutput(params)
-	loggers.Printfln(loggers.Verbose, "Aws response: %v (error %v)\n", resp, err)
+	outputs.Printfln(outputs.Verbose, "Aws response: %v (error %v)\n", resp, err)
 	utils.ExitIfError(err)
 	defer resp.Body.Close()
 	jsonContent, _ := ioutil.ReadAll(resp.Body)
@@ -262,8 +262,8 @@ func DoOnJobPages(glacierClient glacieriface.GlacierAPI, vault string, fn func(*
 		AccountId: aws.String(AccountId),
 		VaultName: aws.String(vault),
 	}
-	loggers.Printfln(loggers.Verbose, "Aws call: glacier.ListJobsPages(%v)", params)
+	outputs.Printfln(outputs.Verbose, "Aws call: glacier.ListJobsPages(%v)", params)
 	err := glacierClient.ListJobsPages(params, fn)
-	loggers.Printfln(loggers.Verbose, "Aws error %v\n", err)
+	outputs.Printfln(outputs.Verbose, "Aws error %v\n", err)
 	utils.ExitIfError(err)
 }

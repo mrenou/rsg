@@ -2,7 +2,7 @@ package utils
 
 import "os"
 import (
-	"rsg/loggers"
+	"rsg/outputs"
 	"io"
 	"strings"
 	"errors"
@@ -13,7 +13,7 @@ const S_1GB = 1024 * S_1MB
 
 func ExitIfError(err error) {
 	if (err != nil) {
-		loggers.Printfln(loggers.Error, "%v", translateAwsErrors(err))
+		outputs.Printfln(outputs.Error, "%v", translateAwsErrors(err))
 		os.Exit(1)
 	}
 }

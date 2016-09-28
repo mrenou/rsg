@@ -1,4 +1,4 @@
-package loggers
+package outputs
 
 import (
 	"os"
@@ -27,11 +27,11 @@ var (
 	errorWriter io.Writer
 )
 
-func InitDefaultLog() {
-	InitLog(os.Stdout, os.Stdout, os.Stdout, os.Stdout, os.Stderr)
+func InitDefaultOutputs() {
+	InitOutputs(os.Stdout, os.Stdout, os.Stdout, os.Stdout, os.Stderr)
 }
 
-func InitLog(pVerboseWriter, pOptionalInfoWriter, pInfoWriter, pWarningWriter, pErrorWriter io.Writer) {
+func InitOutputs(pVerboseWriter, pOptionalInfoWriter, pInfoWriter, pWarningWriter, pErrorWriter io.Writer) {
 	verboseWriter = pVerboseWriter
 	optionalInfoWriter = pOptionalInfoWriter
 	infoWriter = pInfoWriter

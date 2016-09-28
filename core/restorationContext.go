@@ -2,7 +2,7 @@ package core
 
 import (
 	"github.com/aws/aws-sdk-go/aws"
-	"rsg/loggers"
+	"rsg/outputs"
 	"rsg/utils"
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"os/user"
@@ -74,7 +74,7 @@ func ReadRegionVaultCache(region, vault, workingDirPath string) RegionVaultCache
 }
 
 func (restorationContext *RestorationContext) WriteRegionVaultCache() {
-	loggers.Println(loggers.Verbose, "Write cache")
+	outputs.Println(outputs.Verbose, "Write cache")
 	bytes, err := json.Marshal(restorationContext.RegionVaultCache)
 	utils.ExitIfError(err)
 	err = ioutil.WriteFile(restorationContext.WorkingDirPath + "/cache.json", bytes, 0700)

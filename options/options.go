@@ -2,7 +2,7 @@ package options
 
 import (
 	flag "github.com/spf13/pflag"
-	"rsg/loggers"
+	"rsg/outputs"
 )
 
 type Options struct {
@@ -53,27 +53,27 @@ func ParseOptions() Options {
 		awsSecretTruncated = options.AwsSecret[0:3] + "..."
 	}
 
-	loggers.VerboseFlag = options.Verbose
-	loggers.OptionalInfoFlag = options.InfoMessage
-	loggers.Printfln(loggers.Verbose, "Options aws-id: %v", awsIdTruncated)
-	loggers.Printfln(loggers.Verbose, "Options aws-secret: %v", awsSecretTruncated)
-	loggers.Printfln(loggers.Verbose, "Options destination: %v", options.Dest)
-	loggers.Printfln(loggers.Verbose, "Options filters: %v", options.Filters)
+	outputs.VerboseFlag = options.Verbose
+	outputs.OptionalInfoFlag = options.InfoMessage
+	outputs.Printfln(outputs.Verbose, "Options aws-id: %v", awsIdTruncated)
+	outputs.Printfln(outputs.Verbose, "Options aws-secret: %v", awsSecretTruncated)
+	outputs.Printfln(outputs.Verbose, "Options destination: %v", options.Dest)
+	outputs.Printfln(outputs.Verbose, "Options filters: %v", options.Filters)
 	if options.KeepFiles != nil {
-		loggers.Printfln(loggers.Verbose, "Options keep-files: %v ", *options.KeepFiles)
+		outputs.Printfln(outputs.Verbose, "Options keep-files: %v ", *options.KeepFiles)
 	} else {
-		loggers.Println(loggers.Verbose, "Options keep-files: nil", )
+		outputs.Println(outputs.Verbose, "Options keep-files: nil", )
 	}
-	loggers.Printfln(loggers.Verbose, "Options list: %v", options.List)
-	loggers.Printfln(loggers.Verbose, "Options list jobs: %v", options.ListJobs)
-	loggers.Printfln(loggers.Verbose, "Options info-messages: %v", options.InfoMessage)
+	outputs.Printfln(outputs.Verbose, "Options list: %v", options.List)
+	outputs.Printfln(outputs.Verbose, "Options list jobs: %v", options.ListJobs)
+	outputs.Printfln(outputs.Verbose, "Options info-messages: %v", options.InfoMessage)
 	if options.RefreshMappingFile != nil {
-		loggers.Printfln(loggers.Verbose, "Options refresh-mapping-file: %v", *options.RefreshMappingFile)
+		outputs.Printfln(outputs.Verbose, "Options refresh-mapping-file: %v", *options.RefreshMappingFile)
 	} else {
-		loggers.Println(loggers.Verbose, "Options refresh-mapping-file: nil", )
+		outputs.Println(outputs.Verbose, "Options refresh-mapping-file: nil", )
 	}
-	loggers.Printfln(loggers.Verbose, "Options region: %v", options.Region)
-	loggers.Printfln(loggers.Verbose, "Options vault: %v", options.Vault)
-	loggers.Printfln(loggers.Verbose, "Options verbose: %v", options.Verbose)
+	outputs.Printfln(outputs.Verbose, "Options region: %v", options.Region)
+	outputs.Printfln(outputs.Verbose, "Options vault: %v", options.Vault)
+	outputs.Printfln(outputs.Verbose, "Options verbose: %v", options.Verbose)
 	return options
 }

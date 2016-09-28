@@ -5,11 +5,11 @@ import (
 	"github.com/aws/aws-sdk-go/service/glacier"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/stretchr/testify/assert"
-	"rsg/loggers"
+	"rsg/outputs"
 )
 
 func TestGetSynologyVaults_should_return_one_vault(t *testing.T) {
-	loggers.InitDefaultLog()
+	outputs.InitDefaultOutputs()
 	// Given
 
 	glacierMock := new(GlacierMock)
@@ -43,7 +43,7 @@ func TestGetSynologyVaults_should_return_one_vault(t *testing.T) {
 }
 
 func TestGetSynologyVaults_should_return_two_vault2_with_two_aws_requests(t *testing.T) {
-	loggers.InitDefaultLog()
+	outputs.InitDefaultOutputs()
 	// Given
 	glacierMock := new(GlacierMock)
 

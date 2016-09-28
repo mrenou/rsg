@@ -2,7 +2,7 @@ package awsutils
 
 import (
 	"github.com/aws/aws-sdk-go/aws/session"
-	"rsg/loggers"
+	"rsg/outputs"
 	"strings"
 	"github.com/aws/aws-sdk-go/service/iam"
 )
@@ -10,7 +10,7 @@ import (
 func GetAccountId(sessionValue *session.Session) (string, error) {
 	svc := iam.New(sessionValue)
 	params := &iam.GetUserInput{}
-	loggers.Printfln(loggers.Verbose, "Aws call: svc.GetUser(%+v)", params)
+	outputs.Printfln(outputs.Verbose, "Aws call: svc.GetUser(%+v)", params)
 	resp, err := svc.GetUser(params)
 	if err != nil {
 		return "", err

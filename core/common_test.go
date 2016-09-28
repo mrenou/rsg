@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"os"
 	"time"
-	"rsg/loggers"
+	"rsg/outputs"
 	"rsg/awsutils"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/stretchr/testify/mock"
@@ -16,12 +16,12 @@ import (
 )
 
 func CommonInitTest() *bytes.Buffer {
-	loggers.VerboseFlag = true
-	loggers.InitDefaultLog()
+	outputs.VerboseFlag = true
+	outputs.InitDefaultOutputs()
 	buffer := new(bytes.Buffer)
 	os.RemoveAll("../../testtmp")
 	os.MkdirAll("../../testtmp/cache", 0700)
-	loggers.InitLog(os.Stdout, buffer, buffer, buffer, os.Stderr)
+	outputs.InitOutputs(os.Stdout, buffer, buffer, buffer, os.Stderr)
 	awsutils.WaitTime = 1 * time.Nanosecond
 	awsutils.AccountId = "accountId"
 	awsutils.JobIdsAtStartup.MappingInventoryJobId = ""

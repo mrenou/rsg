@@ -2,14 +2,14 @@ package main
 
 import (
 	"rsg/core"
-	"rsg/loggers"
+	"rsg/outputs"
 	"rsg/awsutils"
 	"rsg/utils"
 	"rsg/options"
 )
 
 func main() {
-	loggers.InitDefaultLog()
+	outputs.InitDefaultOutputs()
 	options := options.ParseOptions()
 	core.DisplayInfoAboutCosts(options)
 	awsutils.LoadAccountSession(options.AwsId, options.AwsSecret)

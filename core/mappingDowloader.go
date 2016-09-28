@@ -1,7 +1,7 @@
 package core
 
 import (
-	"rsg/loggers"
+	"rsg/outputs"
 	"rsg/utils"
 	"rsg/inputs"
 	"rsg/awsutils"
@@ -33,15 +33,15 @@ func downloadMappingArchive(restorationContext *RestorationContext) {
 	jobId, jobCompleted := checkRetrieveMappingOrStartNewJob(restorationContext, getMappingArchive(restorationContext))
 	if !jobCompleted {
 		awsutils.WaitJobIsCompleted(restorationContext.GlacierClient, restorationContext.MappingVault, jobId)
-		loggers.Printfln(loggers.OptionalInfo, "Job has finished: %s", jobId)
+		outputs.Printfln(outputs.OptionalInfo, "Job has finished: %s", jobId)
 	}
 	start := time.Now()
 	sizeDownloaded := awsutils.DownloadArchiveTo(restorationContext.GlacierClient, restorationContext.MappingVault, jobId, restorationContext.GetMappingFilePath())
 	restorationContext.BytesBySecond = uint64(float64(sizeDownloaded) / time.Since(start).Seconds())
-	loggers.Printfln(loggers.Verbose, "New download speed: %v/s", bytefmt.ByteSize(restorationContext.BytesBySecond))
+	outputs.Printfln(outputs.Verbose, "New download speed: %v/s", bytefmt.ByteSize(restorationContext.BytesBySecond))
 	restorationContext.RegionVaultCache.MappingArchive = nil
 	restorationContext.WriteRegionVaultCache()
-	loggers.Println(loggers.OptionalInfo, "Mapping archive has been downloaded")
+	outputs.Println(outputs.OptionalInfo, "Mapping archive has been downloaded")
 }
 
 func checkRetrieveMappingOrStartNewJob(restorationContext *RestorationContext, archive awsutils.Archive) (string, bool) {
@@ -49,13 +49,13 @@ func checkRetrieveMappingOrStartNewJob(restorationContext *RestorationContext, a
 	jobId := awsutils.JobIdsAtStartup.MappingRetrievalJobId
 	var err error;
 	if jobId != "" {
-		loggers.Printfln(loggers.Verbose, "Retrieve mapping archive job id found : %s", jobId)
+		outputs.Printfln(outputs.Verbose, "Retrieve mapping archive job id found : %s", jobId)
 		jobCompleted, err = awsutils.JobIsCompleted(restorationContext.GlacierClient, restorationContext.MappingVault, jobId)
 		if jobCompleted == false {
 			if err == nil {
-				loggers.Printfln(loggers.OptionalInfo, "Job to retrieve mapping archive is in progress (can last up to 4 hours): %s", jobId)
+				outputs.Printfln(outputs.OptionalInfo, "Job to retrieve mapping archive is in progress (can last up to 4 hours): %s", jobId)
 			} else if strings.Contains(err.Error(), "The job ID was not found") {
-				loggers.Println(loggers.Warning, "Retrieve mapping archive job cached was not found")
+				outputs.Println(outputs.Warning, "Retrieve mapping archive job cached was not found")
 				jobId = startRetrieveMappingArchiveJob(restorationContext, restorationContext.MappingVault, archive)
 			} else {
 				utils.ExitIfError(err)
@@ -77,7 +77,7 @@ func startRetrieveMappingArchiveJob(restorationContext *RestorationContext, vaul
 	} else {
 		statusStr = "has started"
 	}
-	loggers.Printfln(loggers.OptionalInfo, "Job to retrieve mapping archive %s (can last up to 4 hours): %s", statusStr, jobStartStatus.JobId)
+	outputs.Printfln(outputs.OptionalInfo, "Job to retrieve mapping archive %s (can last up to 4 hours): %s", statusStr, jobStartStatus.JobId)
 	return jobStartStatus.JobId
 }
 
@@ -87,12 +87,12 @@ func getMappingArchive(restorationContext *RestorationContext) awsutils.Archive 
 		jobId, jobCompleted := checkMappingInventoryOrStartNewJob(restorationContext)
 		if jobCompleted == false {
 			awsutils.WaitJobIsCompleted(restorationContext.GlacierClient, restorationContext.MappingVault, jobId)
-			loggers.Printfln(loggers.OptionalInfo, "Job has finished: %s", jobId)
+			outputs.Printfln(outputs.OptionalInfo, "Job has finished: %s", jobId)
 		}
 		restorationContext.RegionVaultCache.MappingArchive = awsutils.GetArchiveIdFromInventory(restorationContext.GlacierClient, restorationContext.MappingVault, jobId)
 		restorationContext.WriteRegionVaultCache()
 	}
-	loggers.Printfln(loggers.Verbose, "Mapping archive id is %s", restorationContext.RegionVaultCache.MappingArchive.ArchiveId)
+	outputs.Printfln(outputs.Verbose, "Mapping archive id is %s", restorationContext.RegionVaultCache.MappingArchive.ArchiveId)
 	return *restorationContext.RegionVaultCache.MappingArchive
 }
 
@@ -101,13 +101,13 @@ func checkMappingInventoryOrStartNewJob(restorationContext *RestorationContext) 
 	jobId := awsutils.JobIdsAtStartup.MappingInventoryJobId
 	var err error
 	if jobId != "" {
-		loggers.Printfln(loggers.Verbose, "Mapping vault inventory job id found : %s", jobId)
+		outputs.Printfln(outputs.Verbose, "Mapping vault inventory job id found : %s", jobId)
 		jobCompleted, err = awsutils.JobIsCompleted(restorationContext.GlacierClient, restorationContext.MappingVault, jobId)
 		if jobCompleted == false {
 			if err == nil {
-				loggers.Printfln(loggers.OptionalInfo, "Job to find mapping archive id is in progress (can last up to 4 hours): %s", jobId)
+				outputs.Printfln(outputs.OptionalInfo, "Job to find mapping archive id is in progress (can last up to 4 hours): %s", jobId)
 			} else if strings.Contains(err.Error(), "The job ID was not found") {
-				loggers.Println(loggers.Warning, "Inventory job cahed for mapping vaul was not found")
+				outputs.Println(outputs.Warning, "Inventory job cahed for mapping vaul was not found")
 				jobId = inventoryMappingVault(restorationContext)
 			} else {
 				utils.ExitIfError(err)
@@ -121,7 +121,7 @@ func checkMappingInventoryOrStartNewJob(restorationContext *RestorationContext) 
 
 func inventoryMappingVault(restorationContext *RestorationContext) string {
 	jobId := awsutils.InventoryTowElementsOfVault(restorationContext.GlacierClient, restorationContext.MappingVault)
-	loggers.Printfln(loggers.OptionalInfo, "Job to find mapping archive id has started (can last up to 4 hours): %s", jobId)
+	outputs.Printfln(outputs.OptionalInfo, "Job to find mapping archive id has started (can last up to 4 hours): %s", jobId)
 	return jobId
 }
 

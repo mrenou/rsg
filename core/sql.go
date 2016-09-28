@@ -3,7 +3,7 @@ package core
 import (
 	"database/sql"
 	"strings"
-	"rsg/loggers"
+	"rsg/outputs"
 	"rsg/utils"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -25,7 +25,7 @@ func GetFiles(db *sql.DB, filters []string) *sql.Rows {
 func GetArchives(db *sql.DB, filters []string) *sql.Rows {
 	where := buildWhereFromFilters(filters)
 	sqlQuery := "SELECT DISTINCT archiveId, fileSize FROM file_info_tb " + where + " ORDER BY key"
-	loggers.Printfln(loggers.Verbose, "Query mapping file for archives: %v", sqlQuery)
+	outputs.Printfln(outputs.Verbose, "Query mapping file for archives: %v", sqlQuery)
 	rows, err := db.Query(sqlQuery)
 	utils.ExitIfError(err)
 	return rows

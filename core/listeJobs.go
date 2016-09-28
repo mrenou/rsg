@@ -2,14 +2,14 @@ package core
 
 import (
 	"rsg/awsutils"
-	"rsg/loggers"
+	"rsg/outputs"
 	"github.com/aws/aws-sdk-go/service/glacier"
 )
 
 func ListJobs(restorationContext *RestorationContext) {
 	displayJobsFn := func(page *glacier.ListJobsOutput, lastPage bool) bool {
 		for _, desc := range page.JobList {
-			loggers.Printfln(loggers.Info, "%s", desc.String())
+			outputs.Printfln(outputs.Info, "%s", desc.String())
 		}
 		return true
 	}

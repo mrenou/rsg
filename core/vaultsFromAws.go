@@ -7,7 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/glacier/glacieriface"
 	"strings"
 	"errors"
-	"rsg/loggers"
+	"rsg/outputs"
 	"rsg/utils"
 	"rsg/awsutils"
 )
@@ -22,7 +22,7 @@ type SynologyCoupleVault struct {
 }
 
 func GetSynologyVaults(regionFilter, vaultFilter string) ([]*SynologyCoupleVault, error) {
-	loggers.Printfln(loggers.OptionalInfo, "Scan synology backup vaults...")
+	outputs.Printfln(outputs.OptionalInfo, "Scan synology backup vaults...")
 	if regionFilter != "" {
 		return getSynologyVaultsOnOneRegions(regionFilter, vaultFilter)
 	}
@@ -52,7 +52,7 @@ func getSynologyVaultsOnAllRegions(vaultFilter string) ([]*SynologyCoupleVault, 
 }
 
 func getSynologyVaultsForRegion(glacierClient glacieriface.GlacierAPI, region string, vaultFilter string) ([]*SynologyCoupleVault, error) {
-	loggers.Printfln(loggers.Verbose, "Get vaults for region %s with vaultFilter=%s", region, vaultFilter)
+	outputs.Printfln(outputs.Verbose, "Get vaults for region %s with vaultFilter=%s", region, vaultFilter)
 	haveResults := true
 	possibleDataVaults := map[string]*glacier.DescribeVaultOutput{}
 	synologyCoupleVaults := []*SynologyCoupleVault{}
@@ -69,13 +69,13 @@ func getSynologyVaultsForRegion(glacierClient glacieriface.GlacierAPI, region st
 				dataVaultName := vaultName[0:strings.LastIndex(vaultName, "_mapping")]
 				if dataVault, ok := possibleDataVaults[dataVaultName]; ok {
 					if vaultFilter != "" && vaultFilter == dataVaultName {
-						loggers.Printfln(loggers.Verbose, "Vault found %s", dataVaultName)
+						outputs.Printfln(outputs.Verbose, "Vault found %s", dataVaultName)
 						return []*SynologyCoupleVault{{Region: region,
 							Name: dataVaultName,
 							DataVault: dataVault,
 							MappingVault: vault}}, nil
 					} else {
-						loggers.Printfln(loggers.Verbose, "Vault added %s", dataVaultName)
+						outputs.Printfln(outputs.Verbose, "Vault added %s", dataVaultName)
 						synologyCoupleVaults = append(synologyCoupleVaults, &SynologyCoupleVault{Region: region,
 							Name: dataVaultName,
 							DataVault: dataVault,

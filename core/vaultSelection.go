@@ -1,7 +1,7 @@
 package core
 
 import (
-	"rsg/loggers"
+	"rsg/outputs"
 	"rsg/utils"
 	"rsg/inputs"
 )
@@ -20,23 +20,23 @@ func selectRegionVaultFromSynologyVaults(synologyCoupleVaults []*SynologyCoupleV
 		synologyCoupleVaultToUse = synologyCoupleVaults[0]
 	default:
 		for _, synologyCoupleVault := range synologyCoupleVaults {
-			loggers.Printfln(loggers.Info, "%s:%s", synologyCoupleVault.Region, synologyCoupleVault.Name)
+			outputs.Printfln(outputs.Info, "%s:%s", synologyCoupleVault.Region, synologyCoupleVault.Name)
 		}
 		for synologyCoupleVaultToUse == nil {
 			region := inputs.QueryString("Select the region of the vault to use:")
 			vault := inputs.QueryString("Select the vault to use:")
 			synologyCoupleVaultToUse = getVaultIfExist(region, vault, synologyCoupleVaults)
 			if synologyCoupleVaultToUse == nil {
-				loggers.Println(loggers.Info, "Vault or region doesn't exist. Try again...")
+				outputs.Println(outputs.Info, "Vault or region doesn't exist. Try again...")
 			}
 		}
 	}
 
 	if synologyCoupleVaultToUse != nil {
-		loggers.Printfln(loggers.OptionalInfo, "Synology backup vault used: %s:%s", synologyCoupleVaultToUse.Region, synologyCoupleVaultToUse.Name)
+		outputs.Printfln(outputs.OptionalInfo, "Synology backup vault used: %s:%s", synologyCoupleVaultToUse.Region, synologyCoupleVaultToUse.Name)
 		return synologyCoupleVaultToUse.Region, synologyCoupleVaultToUse.Name
 	} else {
-		loggers.Println(loggers.Error, "No synology backup vault found")
+		outputs.Println(outputs.Error, "No synology backup vault found")
 		return "", ""
 	}
 
