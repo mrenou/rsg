@@ -8,7 +8,7 @@ import (
 
 func QueryContinue() {
 	outputs.Print(outputs.Info, "Press to continue...")
-	for _, _ = range consts.LINE_BREAK {
+	for range consts.LINE_BREAK {
 		_, err := StdinReader.ReadByte()
 		utils.ExitIfError(err)
 	}

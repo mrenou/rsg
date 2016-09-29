@@ -182,7 +182,6 @@ func StartRetrievePartialArchiveJob(glacierClient glacieriface.GlacierAPI, vault
 	rangeToRetrieve = strconv.FormatUint(fromByte, 10) + "-" + strconv.FormatUint(fromByte + sizeToRetrieve - 1, 10)
 
 	if existingJobsId := JobIdsAtStartup.GetJobIdForFileRetrieval(archive.ArchiveId, rangeToRetrieve); existingJobsId != "" {
-		outputs.Printfln(outputs.Verbose, "BOOM %v", existingJobsId)
 		return JobStartStatus{JobId: existingJobsId, IsResumed: true, IsSuccess: true, SizeRetrieved: sizeToRetrieve}
 	} else {
 		params := &glacier.InitiateJobInput{

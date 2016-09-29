@@ -165,12 +165,14 @@ func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetr
 				if stat, err := os.Stat(downloadContext.restorationContext.DestinationDirPath + "/" + archiveId); !os.IsNotExist(err) {
 					outputs.Printfln(outputs.Verbose, "Local archive found: %v", archiveId)
 					if !downloadContext.handleArchiveFileDownloadCompletion(archiveId, fileSize) {
-						archiveToRetrieve = &archiveRetrieve{archiveId, fileSize, uint64(stat.Size()) - (uint64(stat.Size()) % utils.S_1MB)}
+						archiveToRetrieve = &archiveRetrieve{archiveId: archiveId,
+							size: fileSize,
+							nextByteIndexToRetrieve: uint64(stat.Size()) - (uint64(stat.Size()) % utils.S_1MB)}
 					}
 				} else if fileSize == 0 {
 					downloadContext.createFilesForEmptyArchive(archiveId)
 				} else {
-					archiveToRetrieve = &archiveRetrieve{archiveId, fileSize, 0}
+					archiveToRetrieve = &archiveRetrieve{archiveId: archiveId, size: fileSize, nextByteIndexToRetrieve: 0}
 				}
 			}
 		}
