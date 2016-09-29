@@ -128,6 +128,7 @@ func DownloadArchiveTo(glacierClient glacieriface.GlacierAPI, vault, jobId strin
 }
 
 func DownloadPartialArchiveTo(glacierClient glacieriface.GlacierAPI, vault, jobId, destPath string, fromByteToDownload, sizeToDownload, fromByteToWrite uint64) uint64 {
+	var err error;
 	var rangeToRetrieve *string = nil
 	if sizeToDownload != 0 {
 		rangeToRetrieve = aws.String(strconv.FormatUint(fromByteToDownload, 10) + "-" + strconv.FormatUint(fromByteToDownload + sizeToDownload - 1, 10))
@@ -145,6 +146,7 @@ func DownloadPartialArchiveTo(glacierClient glacieriface.GlacierAPI, vault, jobI
 	defer resp.Body.Close()
 	var file *os.File;
 	file, err = os.OpenFile(destPath, os.O_CREATE | os.O_RDWR, 0600)
+	defer utils.CheckingClose(file, &err)
 	file.Seek(int64(fromByteToWrite), os.SEEK_SET)
 	utils.ExitIfError(err)
 	outputs.Printfln(outputs.Verbose, "Copy file into: %v", destPath)

@@ -349,9 +349,11 @@ func (downloadContext *DownloadContext) handleArchivePartDownloadCompletion(rest
 }
 
 func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(archiveId string, size uint64) bool {
+	var err error;
 	destinationDirPath := downloadContext.restorationContext.DestinationDirPath
 	file, err := os.Open(destinationDirPath + "/" + archiveId)
 	utils.ExitIfError(err)
+	defer utils.CheckingClose(file, &err)
 	stat, err := file.Stat()
 	utils.ExitIfError(err)
 	if uint64(stat.Size()) >= size {
@@ -367,7 +369,7 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(arch
 			var path string
 			pathRows.Scan(&path)
 			if !utils.Exists(destinationDirPath + "/" + previousPath) {
-				err := os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
+				err = os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
 				utils.ExitIfError(err)
 				utils.CopyFile(destinationDirPath + "/" + previousPath, destinationDirPath + "/" + archiveId)
 				outputs.Printfln(outputs.Verbose, "File %v restored (copy from %v)", destinationDirPath + "/" + previousPath, archiveId)
@@ -375,7 +377,7 @@ func (downloadContext *DownloadContext) handleArchiveFileDownloadCompletion(arch
 			previousPath = path;
 		}
 		if previousPath != "" && !utils.Exists(destinationDirPath + "/" + previousPath) {
-			err := os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
+			err = os.MkdirAll(filepath.Dir(destinationDirPath + "/" + previousPath), 0700)
 			utils.ExitIfError(err)
 			os.Rename(destinationDirPath + "/" + archiveId, destinationDirPath + "/" + previousPath)
 			outputs.Printfln(outputs.Verbose, "File %v restored (rename from %v)", destinationDirPath + "/" + previousPath, archiveId)

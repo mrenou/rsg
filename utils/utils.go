@@ -64,3 +64,10 @@ func Exists(path string) bool {
 	}
 }
 
+func CheckingClose(c io.Closer, previousError *error) {
+	err := c.Close()
+	if previousError == nil {
+		ExitIfError(err)
+	}
+}
+
