@@ -34,7 +34,7 @@ func GetArchives(db *sql.DB, filters []string) *sql.Rows {
 }
 
 func GetPaths(db *sql.DB, archiveId string) *sql.Rows {
-	stmt, err := db.Prepare("SELECT DISTINCT basePath FROM file_info_tb WHERE archiveId = ?")
+	stmt, err := db.Prepare("SELECT DISTINCT shareName || '/' || basePath FROM file_info_tb WHERE archiveId = ?")
 	utils.ExitIfError(err)
 	defer stmt.Close()
 	rows, err := stmt.Query(archiveId)

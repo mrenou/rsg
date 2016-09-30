@@ -100,7 +100,7 @@ func TestDownloadArchives_retrieve_and_download_file_in_one_part(t *testing.T) {
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 1,
-		archivesRetrievialMaxSize: utils.S_1MB,
+		archivesRetrievalMaxSize: utils.S_1MB,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 1,
@@ -112,7 +112,7 @@ func TestDownloadArchives_retrieve_and_download_file_in_one_part(t *testing.T) {
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file1.txt', 'archiveId1', 5);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file1.txt', 'archiveId1', 5);")
 	db.Close()
 
 	mockStartPartialRetrieveJob(glacierMock, restorationContext.Vault, "archiveId1", "0-4", "jobId1")
@@ -123,7 +123,7 @@ func TestDownloadArchives_retrieve_and_download_file_in_one_part(t *testing.T) {
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/file1.txt", "hello")
+	assertFileContent(t, "../../testtmp/dest/share/data/file1.txt", "hello")
 }
 
 func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T) {
@@ -133,7 +133,7 @@ func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 3496, // 1048800 on 5 min
-		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		archivesRetrievalMaxSize: utils.S_1MB * 2,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 10,
@@ -145,7 +145,7 @@ func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file1.txt', 'archiveId1', 4194304);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file1.txt', 'archiveId1', 4194304);")
 	db.Close()
 
 	mockStartPartialRetrieveJob(glacierMock, restorationContext.Vault, "archiveId1", "0-2097151", "jobId1").Once()
@@ -168,7 +168,7 @@ func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/file1.txt", strings.Repeat("_", 4194299) + "hello")
+	assertFileContent(t, "../../testtmp/dest/share/data/file1.txt", strings.Repeat("_", 4194299) + "hello")
 }
 
 func TestDownloadArchives_retrieve_and_download_2_files_with_multipart(t *testing.T) {
@@ -178,7 +178,7 @@ func TestDownloadArchives_retrieve_and_download_2_files_with_multipart(t *testin
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 3496, // 1048800 on 5 min
-		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		archivesRetrievalMaxSize: utils.S_1MB * 2,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 10,
@@ -190,8 +190,8 @@ func TestDownloadArchives_retrieve_and_download_2_files_with_multipart(t *testin
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file1.txt', 'archiveId1', 4194304);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file2.txt', 'archiveId2', 2097152);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file1.txt', 'archiveId1', 4194304);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file2.txt', 'archiveId2', 2097152);")
 	db.Close()
 
 	mockStartPartialRetrieveJob(glacierMock, restorationContext.Vault, "archiveId1", "0-2097151", "jobId1").Once()
@@ -224,8 +224,8 @@ func TestDownloadArchives_retrieve_and_download_2_files_with_multipart(t *testin
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/file1.txt", strings.Repeat("_", 4194299) + "hello")
-	assertFileContent(t, "../../testtmp/dest/data/file2.txt", strings.Repeat("_", 2097147) + "olleh")
+	assertFileContent(t, "../../testtmp/dest/share/data/file1.txt", strings.Repeat("_", 4194299) + "hello")
+	assertFileContent(t, "../../testtmp/dest/share/data/file2.txt", strings.Repeat("_", 2097147) + "olleh")
 }
 
 func TestDownloadArchives_retrieve_and_download_3_files_with_2_identical(t *testing.T) {
@@ -235,7 +235,7 @@ func TestDownloadArchives_retrieve_and_download_3_files_with_2_identical(t *test
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 3496, // 1048800 on 5 min
-		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		archivesRetrievalMaxSize: utils.S_1MB * 2,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 10,
@@ -247,9 +247,9 @@ func TestDownloadArchives_retrieve_and_download_3_files_with_2_identical(t *test
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file1.txt', 'archiveId1', 4194304);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file2.txt', 'archiveId2', 2097152);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file3.txt', 'archiveId1', 4194304);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file1.txt', 'archiveId1', 4194304);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file2.txt', 'archiveId2', 2097152);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file3.txt', 'archiveId1', 4194304);")
 	db.Close()
 
 	mockStartPartialRetrieveJob(glacierMock, restorationContext.Vault, "archiveId1", "0-2097151", "jobId1").Once()
@@ -282,9 +282,9 @@ func TestDownloadArchives_retrieve_and_download_3_files_with_2_identical(t *test
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/file1.txt", strings.Repeat("_", 4194299) + "hello")
-	assertFileContent(t, "../../testtmp/dest/data/file2.txt", strings.Repeat("_", 2097147) + "olleh")
-	assertFileContent(t, "../../testtmp/dest/data/file3.txt", strings.Repeat("_", 4194299) + "hello")
+	assertFileContent(t, "../../testtmp/dest/share/data/file1.txt", strings.Repeat("_", 4194299) + "hello")
+	assertFileContent(t, "../../testtmp/dest/share/data/file2.txt", strings.Repeat("_", 2097147) + "olleh")
+	assertFileContent(t, "../../testtmp/dest/share/data/file3.txt", strings.Repeat("_", 4194299) + "hello")
 }
 
 func TestDownloadArchives_retrieve_and_download_only_filtered_files(t *testing.T) {
@@ -295,7 +295,7 @@ func TestDownloadArchives_retrieve_and_download_only_filtered_files(t *testing.T
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 3496, // 1048800 on 5 min
-		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		archivesRetrievalMaxSize: utils.S_1MB * 2,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 10,
@@ -307,18 +307,18 @@ func TestDownloadArchives_retrieve_and_download_only_filtered_files(t *testing.T
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'archiveId1', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file2.bin', 'archiveId2', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folderno/no.bin', 'archiveId3', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/no', 'archiveId4', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/otherfolder/no', 'archiveId5', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/otherfolder/file3.info', 'archiveId6', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/otherfolder/no.txt', 'archiveId7', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file4.info', 'archiveId8', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file41.bin', 'archiveId9', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file42.bin', 'archiveId10', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/filenop.bin', 'archiveId11', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/iwantthis', 'archiveId12', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file1.txt', 'archiveId1', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file2.bin', 'archiveId2', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folderno/no.bin', 'archiveId3', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/no', 'archiveId4', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/otherfolder/no', 'archiveId5', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/otherfolder/file3.info', 'archiveId6', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/otherfolder/no.txt', 'archiveId7', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file4.info', 'archiveId8', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file41.bin', 'archiveId9', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file42.bin', 'archiveId10', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/filenop.bin', 'archiveId11', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/iwantthis', 'archiveId12', 2);")
 	db.Close()
 
 	mockStartPartialRetrieveJobForAny(glacierMock, "jobId")
@@ -329,18 +329,18 @@ func TestDownloadArchives_retrieve_and_download_only_filtered_files(t *testing.T
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/folder/file1.txt", "ok")
-	assertFileContent(t, "../../testtmp/dest/data/folder/file2.bin", "ok")
-	assertFileDoestntExist(t, "../../testtmp/dest/data/folder/no.bin")
-	assertFileDoestntExist(t, "../../testtmp/dest/data/no")
-	assertFileDoestntExist(t, "../../testtmp/dest/data/otherfolder/no")
-	assertFileContent(t, "../../testtmp/dest/data/otherfolder/file3.info", "ok")
-	assertFileDoestntExist(t, "../../testtmp/dest/data/otherfolder/no.txt")
-	assertFileContent(t, "../../testtmp/dest/data/file4.info", "ok")
-	assertFileContent(t, "../../testtmp/dest/data/file41.bin", "ok")
-	assertFileContent(t, "../../testtmp/dest/data/file42.bin", "ok")
-	assertFileDoestntExist(t, "../../testtmp/dest/data/filenop.bin")
-	assertFileContent(t, "../../testtmp/dest/data/iwantthis", "ok")
+	assertFileContent(t, "../../testtmp/dest/share/data/folder/file1.txt", "ok")
+	assertFileContent(t, "../../testtmp/dest/share/data/folder/file2.bin", "ok")
+	assertFileDoestntExist(t, "../../testtmp/dest/share/data/folder/no.bin")
+	assertFileDoestntExist(t, "../../testtmp/dest/share/data/no")
+	assertFileDoestntExist(t, "../../testtmp/dest/share/data/otherfolder/no")
+	assertFileContent(t, "../../testtmp/dest/share/data/otherfolder/file3.info", "ok")
+	assertFileDoestntExist(t, "../../testtmp/dest/share/data/otherfolder/no.txt")
+	assertFileContent(t, "../../testtmp/dest/share/data/file4.info", "ok")
+	assertFileContent(t, "../../testtmp/dest/share/data/file41.bin", "ok")
+	assertFileContent(t, "../../testtmp/dest/share/data/file42.bin", "ok")
+	assertFileDoestntExist(t, "../../testtmp/dest/share/data/filenop.bin")
+	assertFileContent(t, "../../testtmp/dest/share/data/iwantthis", "ok")
 }
 
 func TestDownloadArchives_compute_total_size(t *testing.T) {
@@ -351,7 +351,7 @@ func TestDownloadArchives_compute_total_size(t *testing.T) {
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 3496, // 1048800 on 5 min
-		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		archivesRetrievalMaxSize: utils.S_1MB * 2,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 10,
@@ -363,11 +363,11 @@ func TestDownloadArchives_compute_total_size(t *testing.T) {
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'archiveId1', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file2.bin', 'archiveId2', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file3.txt', 'archiveId1', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/no', 'archiveId3', 2);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/nop', 'archiveId1', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file1.txt', 'archiveId1', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file2.bin', 'archiveId2', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file3.txt', 'archiveId1', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/no', 'archiveId3', 2);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/nop', 'archiveId1', 2);")
 	db.Close()
 
 	mockStartPartialRetrieveJobForAny(glacierMock, "jobId")
@@ -389,7 +389,7 @@ func TestDownloadArchives_retrieve_and_download_an_archive_already_started(t *te
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 3496, // 1048800 on 5 min
-		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		archivesRetrievalMaxSize: utils.S_1MB * 2,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 10,
@@ -401,7 +401,7 @@ func TestDownloadArchives_retrieve_and_download_an_archive_already_started(t *te
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'archiveId1', 1048581);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file1.txt', 'archiveId1', 1048581);")
 	db.Close()
 
 	ioutil.WriteFile("../../testtmp/dest/archiveId1", append([]byte(strings.Repeat("_", 1048576)), []byte("hel")...), 0700)
@@ -414,7 +414,7 @@ func TestDownloadArchives_retrieve_and_download_an_archive_already_started(t *te
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/folder/file1.txt", strings.Repeat("_", 1048576) + "hello")
+	assertFileContent(t, "../../testtmp/dest/share/data/folder/file1.txt", strings.Repeat("_", 1048576) + "hello")
 }
 
 func TestDownloadArchives_retrieve_and_download_an_archive_already_started_and_completed(t *testing.T) {
@@ -424,7 +424,7 @@ func TestDownloadArchives_retrieve_and_download_an_archive_already_started_and_c
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 3496, // 1048800 on 5 min
-		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		archivesRetrievalMaxSize: utils.S_1MB * 2,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 10,
@@ -436,8 +436,8 @@ func TestDownloadArchives_retrieve_and_download_an_archive_already_started_and_c
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'archiveId1', 1048581);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file2.txt', 'archiveId1', 1048581);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file1.txt', 'archiveId1', 1048581);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file2.txt', 'archiveId1', 1048581);")
 	db.Close()
 
 	ioutil.WriteFile("../../testtmp/dest/archiveId1", append([]byte(strings.Repeat("_", 1048576)), []byte("hello")...), 0700)
@@ -446,8 +446,8 @@ func TestDownloadArchives_retrieve_and_download_an_archive_already_started_and_c
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/folder/file1.txt", strings.Repeat("_", 1048576) + "hello")
-	assertFileContent(t, "../../testtmp/dest/data/folder/file2.txt", strings.Repeat("_", 1048576) + "hello")
+	assertFileContent(t, "../../testtmp/dest/share/data/folder/file1.txt", strings.Repeat("_", 1048576) + "hello")
+	assertFileContent(t, "../../testtmp/dest/share/data/folder/file2.txt", strings.Repeat("_", 1048576) + "hello")
 }
 
 func TestDownloadArchives_retrieve_when_archive_is_not_found(t *testing.T) {
@@ -457,7 +457,7 @@ func TestDownloadArchives_retrieve_when_archive_is_not_found(t *testing.T) {
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 3496, // 1048800 on 5 min
-		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		archivesRetrievalMaxSize: utils.S_1MB * 2,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 10,
@@ -469,9 +469,9 @@ func TestDownloadArchives_retrieve_when_archive_is_not_found(t *testing.T) {
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'archiveId1', 1);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file2.txt', 'archiveId2', 1);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file3.txt', 'archiveId3', 1);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file1.txt', 'archiveId1', 1);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file2.txt', 'archiveId2', 1);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file3.txt', 'archiveId3', 1);")
 	db.Close()
 
 	mockStartPartialRetrieveJob(glacierMock, restorationContext.Vault, "archiveId1", "0-0", "jobId1").Once()
@@ -488,9 +488,9 @@ func TestDownloadArchives_retrieve_when_archive_is_not_found(t *testing.T) {
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/folder/file1.txt", "1")
-	assertFileDoestntExist(t, "../../testtmp/dest/data/folder/file2.txt")
-	assertFileContent(t, "../../testtmp/dest/data/folder/file3.txt", "3")
+	assertFileContent(t, "../../testtmp/dest/share/data/folder/file1.txt", "1")
+	assertFileDoestntExist(t, "../../testtmp/dest/share/data/folder/file2.txt")
+	assertFileContent(t, "../../testtmp/dest/share/data/folder/file3.txt", "3")
 }
 
 func TestDownloadArchives_retrieve_empty_file(t *testing.T) {
@@ -500,7 +500,7 @@ func TestDownloadArchives_retrieve_empty_file(t *testing.T) {
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 3496, // 1048800 on 5 min
-		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		archivesRetrievalMaxSize: utils.S_1MB * 2,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 10,
@@ -512,16 +512,16 @@ func TestDownloadArchives_retrieve_empty_file(t *testing.T) {
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file1.txt', 'GlacierZeroSizeFile', 0);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/folder/file2.txt', 'GlacierZeroSizeFile', 0);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file1.txt', 'GlacierZeroSizeFile', 0);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/folder/file2.txt', 'GlacierZeroSizeFile', 0);")
 	db.Close()
 
 	// When
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/folder/file1.txt", "")
-	assertFileContent(t, "../../testtmp/dest/data/folder/file2.txt", "")
+	assertFileContent(t, "../../testtmp/dest/share/data/folder/file1.txt", "")
+	assertFileContent(t, "../../testtmp/dest/share/data/folder/file2.txt", "")
 }
 
 func TestDownloadArchives_retrieve_and_download_when_retrieval_job_exists(t *testing.T) {
@@ -531,7 +531,7 @@ func TestDownloadArchives_retrieve_and_download_when_retrieval_job_exists(t *tes
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
 		speedInBytesBySec: 1,
-		archivesRetrievialMaxSize: utils.S_1MB,
+		archivesRetrievalMaxSize: utils.S_1MB,
 		speedAutoUpdate: false,
 		archivesRetrievalSize: 0,
 		archivePartRetrievalListMaxSize: 1,
@@ -543,7 +543,7 @@ func TestDownloadArchives_retrieve_and_download_when_retrieval_job_exists(t *tes
 
 	db, _ := sql.Open("sqlite3", restorationContext.GetMappingFilePath())
 	db.Exec("CREATE TABLE `file_info_tb` (`key` INTEGER PRIMARY KEY AUTOINCREMENT, `basePath` TEXT,`archiveID` TEXT, fileSize INTEGER);")
-	db.Exec("INSERT INTO `file_info_tb` (basePath, archiveID, fileSize) VALUES ('data/file1.txt', 'archiveId1', 5);")
+	db.Exec("INSERT INTO `file_info_tb` (shareName, basePath, archiveID, fileSize) VALUES ('share', 'data/file1.txt', 'archiveId1', 5);")
 	db.Close()
 
 	awsutils.AddRetrievalJobAtStartup("archiveId1", "0-4", "jobId1")
@@ -554,7 +554,7 @@ func TestDownloadArchives_retrieve_and_download_when_retrieval_job_exists(t *tes
 	downloadContext.downloadArchives()
 
 	// Then
-	assertFileContent(t, "../../testtmp/dest/data/file1.txt", "hello")
+	assertFileContent(t, "../../testtmp/dest/share/data/file1.txt", "hello")
 }
 
 func assertFileContent(t *testing.T, filePath, expected string) {
