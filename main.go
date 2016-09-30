@@ -8,9 +8,16 @@ import (
 	"rsg/options"
 )
 
+const version = "0.0.1-SNAPSHOT"
+var date string
+
 func main() {
 	outputs.InitDefaultOutputs()
 	options := options.ParseOptions()
+	if options.Version {
+		outputs.Printfln(outputs.Info, "Version %v (%v)", version, date)
+		return
+	}
 	core.DisplayInfoAboutCosts(options)
 	awsutils.LoadAccountSession(options.AwsId, options.AwsSecret)
 	region, vaultName := core.SelectRegionVault(options.Region, options.Vault)

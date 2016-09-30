@@ -18,6 +18,7 @@ type Options struct {
 	InfoMessage        bool
 	RefreshMappingFile *bool
 	KeepFiles          *bool
+	Version          bool
 }
 
 func ParseOptions() Options {
@@ -33,6 +34,7 @@ func ParseOptions() Options {
 	flag.BoolVarP(&options.List, "list", "l", false, "list files")
 	flag.BoolVar(&options.ListJobs, "list-jobs", false, "list aws jobs")
 	flag.BoolVar(&options.InfoMessage, "info-messages", true, "display information messages")
+	flag.BoolVar(&options.Version, "version", false, "display version")
 	options.RefreshMappingFile = flag.Bool("refresh-mapping-file", false, "enable or disable refresh of mapping file")
 	options.KeepFiles = flag.Bool("keep-files", true, "enable or disable keep existing files")
 	flag.Parse()
@@ -75,5 +77,6 @@ func ParseOptions() Options {
 	outputs.Printfln(outputs.Verbose, "Options region: %v", options.Region)
 	outputs.Printfln(outputs.Verbose, "Options vault: %v", options.Vault)
 	outputs.Printfln(outputs.Verbose, "Options verbose: %v", options.Verbose)
+	outputs.Printfln(outputs.Verbose, "Options version: %v", options.Version)
 	return options
 }
