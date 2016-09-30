@@ -122,8 +122,14 @@ func (downloadContext *DownloadContext) downloadArchives() {
 	downloadContext.archivesRetrievingSize = 0
 	downloadContext.hasArchiveRows = true
 
+	lastArchiveRetrieveResult := STARTED
+
 	for !downloadContext.allFilesHasBeenProcessed() {
-		downloadContext.startArchiveRetrievingJobs()
+		if (lastArchiveRetrieveResult == RETRY && downloadContext.uncompletedDownload == nil) {
+			downloadContext.displayStatus("rate limit reached, waiting")
+			time.Sleep(5 * time.Minute)
+		}
+		lastArchiveRetrieveResult = downloadContext.startArchiveRetrievingJobs()
 		downloadContext.downloadArchivesPartWhenReady()
 	}
 }
@@ -135,7 +141,8 @@ func (downloadContext *DownloadContext) allFilesHasBeenProcessed() bool {
 		downloadContext.uncompletedDownload == nil
 }
 
-func (downloadContext *DownloadContext) startArchiveRetrievingJobs() {
+func (downloadContext *DownloadContext) startArchiveRetrievingJobs() ArchiveRetrieveResult {
+	lastArchiveRetrieveResult := STARTED
 	for downloadContext.archivesRetrievingSize < downloadContext.maxArchivesRetrievingSize &&
 		downloadContext.archivePartRetrieveList.Len() < downloadContext.archivePartRetrieveListMaxSize &&
 		(downloadContext.hasArchiveRows || downloadContext.uncompletedRetrieve != nil) {
@@ -144,11 +151,13 @@ func (downloadContext *DownloadContext) startArchiveRetrievingJobs() {
 			downloadContext.uncompletedRetrieve = downloadContext.findNextArchiveToRetrieve()
 		}
 		if downloadContext.uncompletedRetrieve != nil {
-			if startStatus := downloadContext.startArchivePartRetrieveJob(downloadContext.uncompletedRetrieve); startStatus == RETRY {
+			lastArchiveRetrieveResult = downloadContext.startArchivePartRetrieveJob(downloadContext.uncompletedRetrieve)
+			if lastArchiveRetrieveResult == RETRY {
 				break
 			}
 		}
 	}
+	return lastArchiveRetrieveResult
 }
 
 func (downloadContext *DownloadContext) findNextArchiveToRetrieve() *archiveRetrieve {
@@ -271,12 +280,7 @@ func (downloadContext *DownloadContext) retryArchivePartRetrieveJob(archiveToRet
 			return STARTED, jobStartStatus.JobId, jobStartStatus.SizeRetrieved
 		}
 		if strings.Contains(jobStartStatus.Err.Error(), "PolicyEnforcedException") {
-			if (downloadContext.uncompletedDownload != nil) {
 				return RETRY, "", 0
-			}
-			downloadContext.displayStatus("rate limit reached, waiting")
-			time.Sleep(5 * time.Minute)
-
 		} else if strings.Contains(jobStartStatus.Err.Error(), "ResourceNotFoundException") {
 			outputs.Printfln(outputs.Warning, "Archive not found %s, skipped...", archiveToRetrieve.archiveId)
 			downloadContext.uncompletedRetrieve = nil
