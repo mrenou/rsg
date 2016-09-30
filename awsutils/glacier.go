@@ -8,6 +8,7 @@ import (
 	"rsg/utils"
 )
 
+// Loaded in package variable because don't change after vault selection
 var AccountId string
 var Session *session.Session
 

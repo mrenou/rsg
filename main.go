@@ -29,7 +29,7 @@ func main() {
 	} else {
 		awsutils.LoadJobIdsAtStartup(restorationContext.GlacierClient, restorationContext.MappingVault, restorationContext.Vault)
 		core.DownloadMappingArchive(restorationContext)
-		core.QueryFiltersIfNecessary(restorationContext, options)
+		core.QueryFiltersIfNecessary(restorationContext)
 		if options.List {
 			core.ListArchives(restorationContext)
 		} else {

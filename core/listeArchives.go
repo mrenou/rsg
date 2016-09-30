@@ -4,6 +4,8 @@ import (
 	"rsg/outputs"
 )
 
+// List paths from the mapping file
+
 func ListArchives(restorationContext *RestorationContext) {
 	db := InitDb(restorationContext.GetMappingFilePath())
 	defer db.Close()

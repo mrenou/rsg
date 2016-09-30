@@ -8,6 +8,9 @@ import (
 	"rsg/outputs"
 )
 
+// check if destination directory is defined or ask it
+// ask if we need to keep files if already exists or restart new restoration
+
 func CheckDestinationDirectory(restorationContext *RestorationContext) error {
 	for {
 		if restorationContext.DestinationDirPath == "" {

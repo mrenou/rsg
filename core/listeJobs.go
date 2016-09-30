@@ -6,6 +6,8 @@ import (
 	"github.com/aws/aws-sdk-go/service/glacier"
 )
 
+// List aws jobs
+
 func ListJobs(restorationContext *RestorationContext) {
 	displayJobsFn := func(page *glacier.ListJobsOutput, lastPage bool) bool {
 		for _, desc := range page.JobList {

@@ -16,6 +16,14 @@ import (
 	"rsg/speedtest"
 )
 
+// Test connection speed then computes how many bytes to retrieve with aws jobs for a duration of 4 hours.
+// When first jobs has been completed, we download bytes corresponding to 5 min (based on connection speed).
+// After these 5 minutes, we update connection speed and start new retrieval jobs to maintain a buffer of 4
+// hours of bytes to download.
+// Finally, we wait next completed jobs, and over and over...
+//
+// If rate limit is reached, and nothing to download we wait 5 minutes before to retry 
+
 type archiveRetrieve struct {
 	archiveId               string
 	size                    uint64
@@ -53,36 +61,36 @@ const (
 )
 
 type DownloadContext struct {
-	restorationContext             *RestorationContext
-	bytesBySecond                  uint64
-	downloadSpeedAutoUpdate        bool
-	nbBytesToDownload              uint64
-	nbBytesDownloaded              uint64
-	maxArchivesRetrievingSize      uint64
-	archivesRetrievingSize         uint64
-	archivePartRetrieveListMaxSize int
-	archivePartRetrieveList        *list.List
-	hasArchiveRows                 bool
-	db                             *sql.DB
-	archiveRows                    *sql.Rows
-	uncompletedRetrieve            *archiveRetrieve
-	uncompletedDownload            *archivePartRetrieve
-	nextByteIndexToDownload        uint64
+	restorationContext              *RestorationContext
+	speedInBytesBySec               uint64
+	speedAutoUpdate                 bool
+	nbBytesToDownload               uint64
+	nbBytesDownloaded               uint64
+	archivesRetrievalMaxSize        uint64 // max number of bytes to retrieve
+	archivesRetrievalSize           uint64
+	archivePartRetrievalListMaxSize int // max number of elements in the list
+	archivePartRetrieveList         *list.List
+	hasArchiveRows                  bool
+	db                              *sql.DB
+	archiveRows                     *sql.Rows
+	uncompletedRetrieve             *archiveRetrieve
+	uncompletedDownload             *archivePartRetrieve
+	nextByteIndexToDownload         uint64
 }
 
 func (downloadContext *DownloadContext) archivesRetrievingSizeLeft() uint64 {
-	return downloadContext.maxArchivesRetrievingSize - downloadContext.archivesRetrievingSize
+	return downloadContext.archivesRetrievalMaxSize - downloadContext.archivesRetrievalSize
 }
 
 func DownloadArchives(restorationContext *RestorationContext) {
 	downloadContext := new(DownloadContext)
 	downloadContext.restorationContext = restorationContext
-	downloadContext.downloadSpeedAutoUpdate = true
-	downloadContext.archivePartRetrieveListMaxSize = utils.S_1GB / archiveRetrieveStructSize
-	if downloadContext.bytesBySecond == 0 {
-		downloadContext.bytesBySecond = detectOrSelectDownloadSpeed()
+	downloadContext.speedAutoUpdate = true
+	downloadContext.archivePartRetrievalListMaxSize = utils.S_1GB / archiveRetrieveStructSize
+	if downloadContext.speedInBytesBySec == 0 {
+		downloadContext.speedInBytesBySec = detectOrSelectDownloadSpeed()
 	}
-	downloadContext.maxArchivesRetrievingSize = downloadContext.bytesBySecond * uint64(_4hoursInSeconds)
+	downloadContext.archivesRetrievalMaxSize = downloadContext.speedInBytesBySec * uint64(_4hoursInSeconds)
 	downloadContext.downloadArchives()
 }
 
@@ -103,7 +111,7 @@ func detectOrSelectDownloadSpeed() uint64 {
 
 func (downloadContext *DownloadContext) downloadArchives() {
 	DisplayWarnIfNotFreeTier(downloadContext.restorationContext)
-	if (downloadContext.maxArchivesRetrievingSize < utils.S_1MB) {
+	if (downloadContext.archivesRetrievalMaxSize < utils.S_1MB) {
 		utils.ExitIfError(errors.New("Max archives retrieving size cannot be less than 1MB"))
 	}
 
@@ -119,7 +127,7 @@ func (downloadContext *DownloadContext) downloadArchives() {
 	outputs.Printfln(outputs.OptionalInfo, "%v to restore", bytefmt.ByteSize(downloadContext.nbBytesToDownload))
 
 	downloadContext.archivePartRetrieveList = list.New()
-	downloadContext.archivesRetrievingSize = 0
+	downloadContext.archivesRetrievalSize = 0
 	downloadContext.hasArchiveRows = true
 
 	lastArchiveRetrieveResult := STARTED
@@ -143,8 +151,8 @@ func (downloadContext *DownloadContext) allFilesHasBeenProcessed() bool {
 
 func (downloadContext *DownloadContext) startArchiveRetrievingJobs() ArchiveRetrieveResult {
 	lastArchiveRetrieveResult := STARTED
-	for downloadContext.archivesRetrievingSize < downloadContext.maxArchivesRetrievingSize &&
-		downloadContext.archivePartRetrieveList.Len() < downloadContext.archivePartRetrieveListMaxSize &&
+	for downloadContext.archivesRetrievalSize < downloadContext.archivesRetrievalMaxSize &&
+		downloadContext.archivePartRetrieveList.Len() < downloadContext.archivePartRetrievalListMaxSize &&
 		(downloadContext.hasArchiveRows || downloadContext.uncompletedRetrieve != nil) {
 		downloadContext.displayStatus("start retrieve jobs")
 		if downloadContext.uncompletedRetrieve == nil {
@@ -256,7 +264,7 @@ func (downloadContext *DownloadContext) startArchivePartRetrieveJob(archiveToRet
 				archiveSize: archiveToRetrieve.size,
 				nextByteIndexToWrite: archiveToRetrieve.nextByteIndexToRetrieve}
 			archiveToRetrieve.nextByteIndexToRetrieve += sizeRetrieved
-			downloadContext.archivesRetrievingSize += sizeRetrieved
+			downloadContext.archivesRetrievalSize += sizeRetrieved
 			downloadContext.archivePartRetrieveList.PushFront(archivePartRetrieve)
 			downloadContext.handleArchiveRetrieveCompletion(archiveToRetrieve)
 		}
@@ -299,7 +307,7 @@ func (downloadContext *DownloadContext) handleArchiveRetrieveCompletion(archiveT
 }
 
 func (downloadContext *DownloadContext) downloadArchivesPartWhenReady() {
-	maxArchivesDownloadingSize := downloadContext.bytesBySecond * uint64(_5minInSeconds)
+	maxArchivesDownloadingSize := downloadContext.speedInBytesBySec * uint64(_5minInSeconds)
 	var archivesDownloadingSize uint64 = 0
 	totalDuration := time.Duration(0)
 
@@ -315,7 +323,7 @@ func (downloadContext *DownloadContext) downloadArchivesPartWhenReady() {
 		archivesDownloadingSize += sizeDownloaded
 		downloadContext.nbBytesDownloaded += sizeDownloaded
 		downloadContext.nextByteIndexToDownload += sizeDownloaded
-		downloadContext.archivesRetrievingSize -= sizeDownloaded
+		downloadContext.archivesRetrievalSize -= sizeDownloaded
 
 		downloadContext.handleArchivePartDownloadCompletion(downloadContext.restorationContext)
 	}
@@ -335,12 +343,12 @@ func (downloadContext *DownloadContext) displayStatus(phase string) {
 }
 
 func (downloadContext *DownloadContext) updateDownloadSpeed(downloadedSize uint64, duration time.Duration) {
-	if (downloadContext.downloadSpeedAutoUpdate) {
-		downloadContext.bytesBySecond = uint64(float64(downloadedSize) / duration.Seconds())
-		if (downloadContext.bytesBySecond == 0) {
-			downloadContext.bytesBySecond = 1
+	if (downloadContext.speedAutoUpdate) {
+		downloadContext.speedInBytesBySec = uint64(float64(downloadedSize) / duration.Seconds())
+		if (downloadContext.speedInBytesBySec == 0) {
+			downloadContext.speedInBytesBySec = 1
 		}
-		outputs.Printfln(outputs.Verbose, "New download speed: %v/s", bytefmt.ByteSize(downloadContext.bytesBySecond))
+		outputs.Printfln(outputs.Verbose, "New download speed: %v/s", bytefmt.ByteSize(downloadContext.speedInBytesBySec))
 	}
 }
 

@@ -12,6 +12,8 @@ import (
 	"code.cloudfoundry.org/bytefmt"
 )
 
+// Download mapping file
+
 func DownloadMappingArchive(restorationContext *RestorationContext) {
 	if stat, err := os.Stat(restorationContext.GetMappingFilePath()); os.IsNotExist(err) {
 		downloadMappingArchive(restorationContext)

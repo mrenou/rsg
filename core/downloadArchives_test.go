@@ -99,11 +99,11 @@ func TestDownloadArchives_retrieve_and_download_file_in_one_part(t *testing.T) {
 	glacierMock, restorationContext := InitTestWithGlacier()
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 1,
-		maxArchivesRetrievingSize: utils.S_1MB,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 1,
+		speedInBytesBySec: 1,
+		archivesRetrievialMaxSize: utils.S_1MB,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 1,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -132,11 +132,11 @@ func TestDownloadArchives_retrieve_and_download_file_with_multipart(t *testing.T
 	glacierMock, restorationContext := InitTestWithGlacier()
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 3496, // 1048800 on 5 min
-		maxArchivesRetrievingSize: utils.S_1MB * 2,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 10,
+		speedInBytesBySec: 3496, // 1048800 on 5 min
+		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 10,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -177,11 +177,11 @@ func TestDownloadArchives_retrieve_and_download_2_files_with_multipart(t *testin
 	glacierMock, restorationContext := InitTestWithGlacier()
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 3496, // 1048800 on 5 min
-		maxArchivesRetrievingSize: utils.S_1MB * 2,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 10,
+		speedInBytesBySec: 3496, // 1048800 on 5 min
+		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 10,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -234,11 +234,11 @@ func TestDownloadArchives_retrieve_and_download_3_files_with_2_identical(t *test
 	glacierMock, restorationContext := InitTestWithGlacier()
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 3496, // 1048800 on 5 min
-		maxArchivesRetrievingSize: utils.S_1MB * 2,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 10,
+		speedInBytesBySec: 3496, // 1048800 on 5 min
+		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 10,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -294,11 +294,11 @@ func TestDownloadArchives_retrieve_and_download_only_filtered_files(t *testing.T
 	restorationContext.Options.Filters = []string{"data/folder/*", "*.info", "data/file??.bin", "data/iwantthis" }
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 3496, // 1048800 on 5 min
-		maxArchivesRetrievingSize: utils.S_1MB * 2,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 10,
+		speedInBytesBySec: 3496, // 1048800 on 5 min
+		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 10,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -350,11 +350,11 @@ func TestDownloadArchives_compute_total_size(t *testing.T) {
 	restorationContext.Options.Filters = []string{"data/folder/*", "*.info", "data/file??.bin", "data/iwantthis" }
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 3496, // 1048800 on 5 min
-		maxArchivesRetrievingSize: utils.S_1MB * 2,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 10,
+		speedInBytesBySec: 3496, // 1048800 on 5 min
+		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 10,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -388,11 +388,11 @@ func TestDownloadArchives_retrieve_and_download_an_archive_already_started(t *te
 	glacierMock, restorationContext := InitTestWithGlacier()
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 3496, // 1048800 on 5 min
-		maxArchivesRetrievingSize: utils.S_1MB * 2,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 10,
+		speedInBytesBySec: 3496, // 1048800 on 5 min
+		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 10,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -423,11 +423,11 @@ func TestDownloadArchives_retrieve_and_download_an_archive_already_started_and_c
 	_, restorationContext := InitTestWithGlacier()
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 3496, // 1048800 on 5 min
-		maxArchivesRetrievingSize: utils.S_1MB * 2,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 10,
+		speedInBytesBySec: 3496, // 1048800 on 5 min
+		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 10,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -456,11 +456,11 @@ func TestDownloadArchives_retrieve_when_archive_is_not_found(t *testing.T) {
 	glacierMock, restorationContext := InitTestWithGlacier()
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 3496, // 1048800 on 5 min
-		maxArchivesRetrievingSize: utils.S_1MB * 2,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 10,
+		speedInBytesBySec: 3496, // 1048800 on 5 min
+		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 10,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -499,11 +499,11 @@ func TestDownloadArchives_retrieve_empty_file(t *testing.T) {
 	_, restorationContext := InitTestWithGlacier()
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 3496, // 1048800 on 5 min
-		maxArchivesRetrievingSize: utils.S_1MB * 2,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 10,
+		speedInBytesBySec: 3496, // 1048800 on 5 min
+		archivesRetrievialMaxSize: utils.S_1MB * 2,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 10,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,
@@ -530,11 +530,11 @@ func TestDownloadArchives_retrieve_and_download_when_retrieval_job_exists(t *tes
 	glacierMock, restorationContext := InitTestWithGlacier()
 	downloadContext := DownloadContext{
 		restorationContext: restorationContext,
-		bytesBySecond: 1,
-		maxArchivesRetrievingSize: utils.S_1MB,
-		downloadSpeedAutoUpdate: false,
-		archivesRetrievingSize: 0,
-		archivePartRetrieveListMaxSize: 1,
+		speedInBytesBySec: 1,
+		archivesRetrievialMaxSize: utils.S_1MB,
+		speedAutoUpdate: false,
+		archivesRetrievalSize: 0,
+		archivePartRetrievalListMaxSize: 1,
 		archivePartRetrieveList: nil,
 		hasArchiveRows: false,
 		db: nil,

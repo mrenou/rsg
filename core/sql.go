@@ -8,6 +8,8 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+// Sql interactions with mapping file
+
 func InitDb(file string) *sql.DB {
 	db, err := sql.Open("sqlite3", file)
 	utils.ExitIfError(err)

@@ -15,7 +15,7 @@ func TestGetSynologyVaults_should_return_one_vault(t *testing.T) {
 	glacierMock := new(GlacierMock)
 
 	params := &glacier.ListVaultsInput{
-		AccountId: aws.String("accountId"), // Required
+		AccountId: aws.String("accountId"),
 		Limit:     nil,
 		Marker:    nil,
 	}
@@ -64,7 +64,7 @@ func TestGetSynologyVaults_should_return_two_vault2_with_two_aws_requests(t *tes
 	glacierMock.On("ListVaults", params).Return(out, nil)
 
 	params = &glacier.ListVaultsInput{
-		AccountId: aws.String("accountId"), // Required
+		AccountId: aws.String("accountId"),
 		Limit:     nil,
 		Marker:    aws.String("marker"),
 	}
